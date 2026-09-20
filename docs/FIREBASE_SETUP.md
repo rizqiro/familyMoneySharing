@@ -267,6 +267,27 @@ kotlin.incremental=false
 Then `flutter clean && flutter pub get && flutter run`. Rebuilds get slower;
 nothing else changes.
 
+**`flutterfire: command not found`**
+
+It installed; it is just not on `PATH`. `dart pub global activate` puts the
+executable in the pub cache's `bin` folder and leaves adding it to you.
+
+Run it without `PATH` at all:
+
+```bash
+dart pub global run flutterfire_cli:flutterfire configure
+```
+
+Or add the folder - on Windows that is
+`%LOCALAPPDATA%\Pub\Cache\bin`, or `<PUB_CACHE>\bin` if you moved the cache:
+
+```
+setx PATH "%PATH%;%LOCALAPPDATA%\Pub\Cache\bin"
+```
+
+Reopen the terminal afterwards. `dart pub global list` confirms whether
+`flutterfire_cli` is activated in the first place.
+
 **Windows: `migrate your plugin to Built-in Kotlin` notice**
 A deprecation warning from the plugin, not an error. Harmless - it does not
 stop the build.
