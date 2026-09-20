@@ -243,6 +243,34 @@ Either click the link, or run the index deploy in step 6.
 **Sign-up fails: "Email sign-in is not enabled"**
 Step 2 was skipped.
 
+**Windows: `Could not close incremental caches` / `this and base files have
+different roots`**
+
+The project and the Dart pub cache are on different drive letters (say the app
+on `G:` and the cache in `C:\Users\<you>\AppData\Local\Pub\Cache`). Kotlin's
+incremental compiler stores plugin sources as paths relative to the project,
+and Windows has no relative path across drives, so it crashes while writing its
+cache. Whichever plugin compiles first takes the blame - usually
+`mobile_scanner` - but any Kotlin plugin would do the same.
+
+Fix it properly by putting both on one drive: either move the project to `C:`,
+or set a `PUB_CACHE` environment variable to something like `G:\pub-cache` and
+run `flutter pub get` to repopulate it.
+
+To just get building now, switch the incremental compiler off in
+`android/gradle.properties`:
+
+```properties
+kotlin.incremental=false
+```
+
+Then `flutter clean && flutter pub get && flutter run`. Rebuilds get slower;
+nothing else changes.
+
+**Windows: `migrate your plugin to Built-in Kotlin` notice**
+A deprecation warning from the plugin, not an error. Harmless - it does not
+stop the build.
+
 **The QR scanner is a blank box**
 Camera permission was declined, or the permission strings in step 5 are
 missing. The typed invite code works either way.
