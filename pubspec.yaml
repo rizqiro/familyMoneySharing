@@ -1,0 +1,36 @@
+name: family_money_sharing
+description: A shared budgeting app for couples - plan budgets together, track spending, see where the money went.
+publish_to: "none"
+version: 0.1.0+1
+
+# Needs Flutter 3.27 or newer (Color.withValues, WidgetStateProperty).
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
+  # State
+  flutter_riverpod: ^2.5.1
+
+  # Pairing
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.2.3
+
+  # Formatting
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

@@ -1,0 +1,186 @@
+rules_version = '2';
+
+// Access control for Family Money.
+//
+// The model in one line: a household is the unit of sharing, membership is the
+// read gate, and the few actions that are *not* symmetric between the two
+// members (who may carve a budget into categories, who may confirm an
+// allocation) are enforced here rather than only in the UI.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function household(hid) {
+      return get(/databases/$(database)/documents/households/$(hid)).data;
+    }
+
+    function isMember(hid) {
+      return signedIn() && uid() in household(hid).memberIds;
+    }
+
+    function budget(hid, bid) {
+      return get(/databases/$(database)/documents/households/$(hid)/budgets/$(bid)).data;
+    }
+
+    function controlsBudget(hid, bid) {
+      return budget(hid, bid).controllerId == uid();
+    }
+
+    // Which keys a write changed.
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // --------------------------------------------------------------- users
+    // A profile is private to its owner. Partner names and emails are read
+    // from the household's denormalised `members` map instead, so nobody needs
+    // read access to anyone else's user document.
+    match /users/{userId} {
+      allow read: if signedIn() && userId == uid();
+      allow create: if signedIn()
+                    && userId == uid()
+                    && request.resource.data.householdId == null;
+      allow update: if signedIn() && userId == uid();
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------- households
+    match /households/{hid} {
+
+      // The joiner is not a member yet, so possession of a live invite is the
+      // credential. The code travels in `joinedVia` because rules cannot see
+      // anything the request does not carry.
+      function joiningWithValidInvite() {
+        let code = request.resource.data.joinedVia;
+        let invite = get(/databases/$(database)/documents/invites/$(code)).data;
+        return code is string
+               && invite.householdId == hid
+               && invite.acceptedBy == null
+               && invite.expiresAt > request.time;
+      }
+
+      function addsOnlySelfAsMember() {
+        return !(uid() in resource.data.memberIds)
+               && uid() in request.resource.data.memberIds
+               && request.resource.data.memberIds.hasAll(resource.data.memberIds)
+               && request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1
+               && request.resource.data.memberIds.size() <= 2;
+      }
+
+      allow read: if signedIn() && uid() in resource.data.memberIds;
+
+      allow create: if signedIn()
+                    && request.resource.data.memberIds == [uid()]
+                    && request.resource.data.createdBy == uid();
+
+      allow update: if signedIn() && (
+                      uid() in resource.data.memberIds
+                      || (addsOnlySelfAsMember() && joiningWithValidInvite())
+                    );
+
+      // Only ever the last member tidying up an empty household.
+      allow delete: if signedIn() && resource.data.memberIds == [uid()];
+
+      // ------------------------------------------------------- budgets
+      match /budgets/{bid} {
+        allow read: if isMember(hid);
+        allow create: if isMember(hid)
+                      && request.resource.data.createdBy == uid();
+        // Its controller decides what happens to it - including handing
+        // control to the other member.
+        allow update, delete: if isMember(hid)
+                              && resource.data.controllerId == uid();
+      }
+
+      // ---------------------------------------------------- categories
+      match /categories/{cid} {
+        allow read: if isMember(hid);
+
+        allow create: if isMember(hid)
+                      && request.resource.data.createdBy == uid()
+                      && controlsBudget(hid, request.resource.data.budgetId);
+
+        // Either the budget's controller changes the allocation, or the member
+        // it was sent to records their decision - and nothing else.
+        allow update: if isMember(hid) && (
+                        controlsBudget(hid, resource.data.budgetId)
+                        || (
+                          resource.data.confirmedBy == uid()
+                          && changed().hasOnly(
+                               ['status', 'decisionNote', 'decidedAt'])
+                        )
+                      );
+
+        allow delete: if isMember(hid)
+                      && controlsBudget(hid, resource.data.budgetId);
+      }
+
+      // ----------------------------------------------------- approvals
+      match /approvals/{aid} {
+        allow read: if isMember(hid);
+
+        allow create: if isMember(hid)
+                      && request.resource.data.requestedBy == uid()
+                      && request.resource.data.requestedFor != uid();
+
+        // Only the recipient answers, and only by writing the decision.
+        allow update: if isMember(hid)
+                      && resource.data.requestedFor == uid()
+                      && changed().hasOnly(
+                           ['status', 'decisionNote', 'decidedAt']);
+
+        // Superseded when the allocation it asked about is edited again, or
+        // swept up when the budget it belongs to is deleted.
+        allow delete: if isMember(hid) && (
+                        resource.data.requestedBy == uid()
+                        || controlsBudget(hid, resource.data.budgetId)
+                      );
+      }
+
+      // ------------------------------------------------------ expenses
+      // Deliberately symmetric: the ledger is shared, both members file and
+      // correct entries, and removing a category has to detach entries the
+      // other member wrote.
+      match /expenses/{eid} {
+        allow read: if isMember(hid);
+        allow create: if isMember(hid)
+                      && request.resource.data.spentBy is string
+                      && request.resource.data.amount is number
+                      && request.resource.data.amount > 0;
+        allow update, delete: if isMember(hid);
+      }
+    }
+
+    // ------------------------------------------------------------- invites
+    // The document id is the secret, so a direct read by code is the whole
+    // access check. Listing is closed: codes must never be enumerable.
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if signedIn()
+                    && request.resource.data.createdBy == uid()
+                    && request.resource.data.acceptedBy == null
+                    && isMember(request.resource.data.householdId);
+
+      // Either the inviter manages their own code, or the invitee claims it
+      // once - and claiming sets it to themselves.
+      allow update: if signedIn() && (
+                      resource.data.createdBy == uid()
+                      || (
+                        resource.data.acceptedBy == null
+                        && request.resource.data.acceptedBy == uid()
+                      )
+                    );
+
+      allow delete: if signedIn() && resource.data.createdBy == uid();
+    }
+  }
+}
