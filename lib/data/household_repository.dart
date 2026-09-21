@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 
 import '../models/app_user.dart';
 import '../models/household.dart';
@@ -145,33 +146,44 @@ class HouseholdRepository {
       await _discardIfAbandoned(previous, joiner.uid);
     }
 
-    await db.runTransaction((tx) async {
-      final inviteSnap = await tx.get(_refs.invite(invite.code));
-      final householdSnap = await tx.get(_refs.household(invite.householdId));
+    // The household is deliberately not read here: only members may read one,
+    // and the joiner is not a member yet. Everything the write needs comes from
+    // the invite, and the rules re-check it against the stored document.
+    try {
+      await _claim(invite: invite, joiner: joiner);
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw const HouseholdFailure(
+          'That invite was refused. It may have just been used, expired, or '
+          'the household may already have two members. Ask for a fresh code.',
+        );
+      }
+      rethrow;
+    }
+  }
 
+  Future<void> _claim({
+    required Invite invite,
+    required AppUser joiner,
+  }) {
+    return db.runTransaction((tx) async {
+      final inviteSnap = await tx.get(_refs.invite(invite.code));
       if (!inviteSnap.exists) {
         throw const HouseholdFailure('That invite no longer exists.');
       }
+
       final fresh = Invite.fromDoc(inviteSnap);
       if (!fresh.isUsable) {
         throw const HouseholdFailure(
           'That invite is no longer valid. Ask for a new code.',
         );
       }
-      if (!householdSnap.exists) {
-        throw const HouseholdFailure('That household no longer exists.');
-      }
 
-      final household = Household.fromDoc(householdSnap);
-      if (household.memberIds.contains(joiner.uid)) return;
-      if (household.memberIds.length >= maxMembers) {
-        throw const HouseholdFailure(
-          'That household already has two members.',
-        );
-      }
-
-      tx.update(_refs.household(household.id), {
-        'memberIds': FieldValue.arrayUnion([joiner.uid]),
+      // Written out in full rather than with arrayUnion, so the rules can check
+      // the resulting membership directly. An invite only exists while the
+      // household has one member, so the pair is always inviter + joiner.
+      tx.update(_refs.household(fresh.householdId), {
+        'memberIds': [fresh.createdBy, joiner.uid],
         'members.${joiner.uid}': HouseholdMember(
           uid: joiner.uid,
           displayName: joiner.displayName,
@@ -183,7 +195,7 @@ class HouseholdRepository {
         'joinedVia': invite.code,
         'activeInviteCode': null,
       });
-      tx.update(_refs.user(joiner.uid), {'householdId': household.id});
+      tx.update(_refs.user(joiner.uid), {'householdId': fresh.householdId});
       tx.update(_refs.invite(invite.code), {
         'acceptedBy': joiner.uid,
         'acceptedAt': FieldValue.serverTimestamp(),
