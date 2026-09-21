@@ -66,6 +66,10 @@ service cloud.firestore {
                && invite.expiresAt > request.time;
       }
 
+      // `resource.data` is readable here even though the joiner has no read
+      // access to the document, which is what lets these checks work. The
+      // client sends the new membership in full rather than as an arrayUnion,
+      // so what is compared is the literal resulting array.
       function addsOnlySelfAsMember() {
         return !(uid() in resource.data.memberIds)
                && uid() in request.resource.data.memberIds

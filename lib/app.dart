@@ -46,7 +46,17 @@ class _Gate extends ConsumerWidget {
           data: (appUser) {
             if (appUser == null) return const _Splash();
             if (!appUser.hasHousehold) return const WelcomePage();
-            return const HomeShell();
+
+            // The profile can point at a household that is gone - a join that
+            // failed part-way, or the other member removing this one. Treat a
+            // missing household as having none rather than spinning forever.
+            return ref.watch(householdProvider).when(
+                  loading: () => const _Splash(),
+                  error: (error, _) => _Fatal(message: '$error'),
+                  data: (household) => household == null
+                      ? const WelcomePage()
+                      : const HomeShell(),
+                );
           },
         );
       },
