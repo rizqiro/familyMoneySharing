@@ -267,6 +267,25 @@ pots, so one query per month picks up both.
 **`permission-denied` everywhere**
 The rules were never deployed. Run the `firebase deploy` command in step 6.
 
+**`'firebase' is not recognized` - no CLI, or it is not on PATH**
+
+The Firebase CLI is a separate npm tool (`npm install -g firebase-tools`,
+which needs Node.js); being signed in to the console in a browser is not the
+same thing.
+
+You can skip it entirely and publish from the console:
+
+1. **Firestore Database → Rules** tab.
+2. Copy the whole of `firebase/firestore.rules` from this repo and paste it in,
+   replacing what is there.
+3. **Publish**.
+
+The indexes have no console paste equivalent, but only one is actually
+required - the ledger's month-plus-date query. Either let it fail once and
+click the "create index" link in the error, or add it by hand under
+**Firestore → Indexes → Composite**: collection `expenses`, `period`
+Ascending, `spentAt` Descending, scope Collection.
+
 **"The query requires an index" with a console link**
 Either click the link, or run the index deploy in step 6.
 
