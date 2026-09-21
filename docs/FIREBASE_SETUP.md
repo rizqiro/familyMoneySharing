@@ -318,6 +318,22 @@ setx PATH "%PATH%;%LOCALAPPDATA%\Pub\Cache\bin"
 Reopen the terminal afterwards. `dart pub global list` confirms whether
 `flutterfire_cli` is activated in the first place.
 
+**`Plugin with id 'com.google.gms.google-services' was already requested`**
+
+`flutterfire configure` appends the plugin line to the Gradle files without
+checking whether it is already there, so running it more than once leaves
+duplicates.
+
+Open `android/app/build.gradle.kts` and delete the repeated
+`id("com.google.gms.google-services")` lines until exactly one remains. Check
+`android/settings.gradle.kts` for duplicates of its `... version "..." apply
+false` line too.
+
+Since this app passes its options from Dart, that plugin is optional: if it
+keeps getting in the way - complaining about a missing `google-services.json`,
+for instance - delete every `com.google.gms.google-services` line from both
+files. Auth and Firestore do not need it.
+
 **Windows: `migrate your plugin to Built-in Kotlin` notice**
 A deprecation warning from the plugin, not an error. Harmless - it does not
 stop the build.
