@@ -88,6 +88,36 @@ minimum). The command:
 
 If you add a platform later, re-run `flutterfire configure`.
 
+### If the CLI will not write the file
+
+`flutterfire configure` can run, print nothing alarming, and still leave
+`lib/firebase_options.dart` untouched - usually because no platform was ticked
+at the checklist (it needs **space**, not Enter).
+
+You do not need the CLI. The file only carries five public identifiers, so
+fill them in by hand:
+
+1. Firebase console → **Project settings** (gear icon) → **General**.
+2. Under **Your apps**, add an Android app if none is listed. The package name
+   must match `applicationId` in `android/app/build.gradle` - by default
+   `com.example.family_money_sharing` unless you passed `--org` to
+   `flutter create`.
+3. Copy these into the constants at the top of `lib/firebase_options.dart`:
+
+   | Constant | Where |
+   |---|---|
+   | `_projectId` | "Project ID" |
+   | `_messagingSenderId` | "Project number" |
+   | `_apiKey` | "Web API key" |
+   | `_androidAppId` | Your apps → Android app → "App ID" (`1:…:android:…`) |
+
+Then `flutter clean && flutter run`. If anything is still a placeholder the
+setup screen names the exact field.
+
+Passing options this way means Auth and Firestore need neither
+`google-services.json` nor the Google Services Gradle plugin - the identifiers
+go straight from Dart to `Firebase.initializeApp`.
+
 ---
 
 ## 5. Platform prerequisites
