@@ -59,8 +59,8 @@ class Period {
 
   bool get isCurrent => this == Period.current();
 
-  String label({String locale = 'en'}) =>
-      DateFormat.yMMMM(locale).format(DateTime(year, month));
+  /// Follows `Intl.defaultLocale`, which `main` sets from the device.
+  String label() => DateFormat.yMMMM().format(DateTime(year, month));
 
   @override
   bool operator ==(Object other) =>

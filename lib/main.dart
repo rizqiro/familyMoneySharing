@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 import 'app.dart';
 import 'core/theme/app_theme.dart';
@@ -8,6 +10,15 @@ import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // intl ships only en_US date data compiled in; every other locale - even
+  // plain 'en' - throws LocaleDataException until this has run.
+  await initializeDateFormatting();
+  Intl.defaultLocale = Intl.verifiedLocale(
+    WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag(),
+    DateFormat.localeExists,
+    onFailure: (_) => 'en_US',
+  );
 
   try {
     await Firebase.initializeApp(
