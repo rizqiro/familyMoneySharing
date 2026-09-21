@@ -1,0 +1,257 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/format/money.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/common.dart';
+import '../../core/widgets/soft_card.dart';
+import '../../data/household_repository.dart';
+import '../../state/providers.dart';
+import '../pairing/join_page.dart';
+
+/// Shown once: the user is signed in but belongs to no household yet.
+class WelcomePage extends ConsumerStatefulWidget {
+  const WelcomePage({super.key});
+
+  @override
+  ConsumerState<WelcomePage> createState() => _WelcomePageState();
+}
+
+class _WelcomePageState extends ConsumerState<WelcomePage> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _createHousehold() async {
+    final profile = ref.read(profileProvider).valueOrNull;
+    if (profile == null) return;
+
+    final result = await showModalBottomSheet<(String, String)>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _NewHouseholdSheet(defaultName: _suggestName(profile.displayName)),
+    );
+    if (result == null) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(householdRepositoryProvider).create(
+            user: profile,
+            name: result.$1,
+            currencyCode: result.$2,
+          );
+    } on HouseholdFailure catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  static String _suggestName(String displayName) {
+    final first = displayName.trim().split(' ').first;
+    return first.isEmpty ? 'Our household' : "$first's household";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+    final profile = ref.watch(profileProvider).valueOrNull;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(Insets.page),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: Insets.xl),
+                  Text(
+                    'Hi ${profile?.displayName.split(' ').first ?? 'there'}',
+                    style: text.displayMedium,
+                  ),
+                  const SizedBox(height: Insets.sm),
+                  Text(
+                    'Money is shared, so the app is too. Start a household and '
+                    'invite your partner, or join the one they already made.',
+                    style: text.bodyLarge?.copyWith(color: colors.inkSecondary),
+                  ),
+                  const SizedBox(height: Insets.xxl),
+
+                  _ChoiceCard(
+                    icon: Icons.add_home_outlined,
+                    title: 'Start our household',
+                    message:
+                        'Create the shared space, then show your partner a QR '
+                        'code to join it.',
+                    onTap: _busy ? null : _createHousehold,
+                  ),
+                  const SizedBox(height: Insets.md),
+                  _ChoiceCard(
+                    icon: Icons.qr_code_scanner,
+                    title: 'Join my partner',
+                    message:
+                        'Scan their QR code, or type the invite code they '
+                        'send you.',
+                    onTap: _busy
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const JoinPage(),
+                              ),
+                            ),
+                  ),
+
+                  if (_error != null) ...[
+                    const SizedBox(height: Insets.lg),
+                    ErrorNote(message: _error!),
+                  ],
+
+                  const SizedBox(height: Insets.xxl),
+                  TextButton(
+                    onPressed: () =>
+                        ref.read(authRepositoryProvider).signOut(),
+                    child: const Text('Sign out'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChoiceCard extends StatelessWidget {
+  const _ChoiceCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+
+    return SoftCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(Insets.lg),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colors.surfaceSunken,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 19, color: colors.ink),
+          ),
+          const SizedBox(width: Insets.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: text.titleMedium),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: text.bodySmall?.copyWith(color: colors.inkSecondary),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: colors.inkMuted, size: 20),
+        ],
+      ),
+    );
+  }
+}
+
+/// Collects the household name and currency before creating it.
+class _NewHouseholdSheet extends StatefulWidget {
+  const _NewHouseholdSheet({required this.defaultName});
+
+  final String defaultName;
+
+  @override
+  State<_NewHouseholdSheet> createState() => _NewHouseholdSheetState();
+}
+
+class _NewHouseholdSheetState extends State<_NewHouseholdSheet> {
+  late final TextEditingController _name =
+      TextEditingController(text: widget.defaultName);
+  String _currency = CurrencyOption.idr.code;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: Insets.page,
+        right: Insets.page,
+        top: Insets.sm,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + Insets.xl,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Name your household', style: text.titleLarge),
+          const SizedBox(height: Insets.lg),
+          TextField(
+            controller: _name,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(hintText: 'Household name'),
+          ),
+          const SizedBox(height: Insets.lg),
+          Text('CURRENCY', style: text.labelSmall),
+          const SizedBox(height: Insets.sm),
+          Wrap(
+            spacing: Insets.sm,
+            runSpacing: Insets.sm,
+            children: [
+              for (final option in CurrencyOption.all)
+                ChoiceChip(
+                  label: Text('${option.symbol} ${option.code}'),
+                  selected: _currency == option.code,
+                  onSelected: (_) => setState(() => _currency = option.code),
+                ),
+            ],
+          ),
+          const SizedBox(height: Insets.xl),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(
+              (_name.text.trim(), _currency),
+            ),
+            child: const Text('Create household'),
+          ),
+        ],
+      ),
+    );
+  }
+}
