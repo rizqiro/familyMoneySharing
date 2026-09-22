@@ -47,6 +47,18 @@ class FirestoreRefs {
   JsonDoc approval(String householdId, String approvalId) =>
       approvals(householdId).doc(approvalId);
 
+  /// Asks to move money from one member's budget to the other's.
+  ///
+  /// Kept apart from `approvals` (which is about category allocations) because
+  /// the two answer different questions and carry different fields. One
+  /// collection holding both would mean every read filtering on a "kind" field
+  /// and half the properties being null.
+  JsonCollection moneyRequests(String householdId) =>
+      household(householdId).collection('moneyRequests');
+
+  JsonDoc moneyRequest(String householdId, String requestId) =>
+      moneyRequests(householdId).doc(requestId);
+
   /// Top-level: an invitee must be able to read the code *before* they are a
   /// member of anything.
   JsonCollection get invites => db.collection('invites');

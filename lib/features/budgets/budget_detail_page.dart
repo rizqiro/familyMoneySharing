@@ -218,11 +218,6 @@ class BudgetDetailPage extends ConsumerWidget {
                       budget: view.budget,
                       existing: category.category,
                     ),
-                    onAddExpense: () => showExpenseEditor(
-                      context,
-                      budgetId: view.budget.id,
-                      categoryId: category.category.id,
-                    ),
                     onDelete: () =>
                         _confirmDeleteCategory(context, ref, category),
                   ),
@@ -255,11 +250,13 @@ class BudgetDetailPage extends ConsumerWidget {
             const SizedBox(height: Insets.xl),
             SectionHeader(title: 'Activity (${expenses.length})'),
             if (expenses.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.receipt_long_outlined,
                 compact: true,
                 title: 'Nothing spent from this budget yet',
-                message: 'Entries you both add show up here.',
+                message: isController
+                    ? 'Entries you file against it show up here.'
+                    : 'Entries $controllerName files against it show up here.',
               )
             else
               SoftCard(
@@ -275,10 +272,15 @@ class BudgetDetailPage extends ConsumerWidget {
                         ),
                       ExpenseTile(
                         expense: expenses[i],
-                        onTap: () => showExpenseEditor(
-                          context,
-                          existing: expenses[i],
-                        ),
+                        // Only the controller may correct an entry filed
+                        // against their budget, so for anyone else the row is
+                        // read-only rather than a tap that would be refused.
+                        onTap: isController
+                            ? () => showExpenseEditor(
+                                  context,
+                                  existing: expenses[i],
+                                )
+                            : null,
                       ),
                     ],
                   ],
@@ -375,14 +377,16 @@ class _CategoryCard extends ConsumerWidget {
     required this.view,
     required this.canEdit,
     required this.onEdit,
-    required this.onAddExpense,
     required this.onDelete,
   });
 
   final CategoryView view;
+
+  /// True only for the budget's controller. Everyone else gets a read-only
+  /// card: they can see the allocation and what is left, but there is nothing
+  /// here for them to act on, because they cannot spend from this budget.
   final bool canEdit;
   final VoidCallback onEdit;
-  final VoidCallback onAddExpense;
   final VoidCallback onDelete;
 
   @override
@@ -399,7 +403,7 @@ class _CategoryCard extends ConsumerWidget {
     };
 
     return SoftCard(
-      onTap: canEdit ? onEdit : onAddExpense,
+      onTap: canEdit ? onEdit : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
