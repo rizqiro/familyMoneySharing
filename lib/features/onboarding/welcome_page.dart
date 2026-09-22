@@ -26,10 +26,15 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
     final profile = ref.read(profileProvider).valueOrNull;
     if (profile == null) return;
 
+    final t = ref.read(textProvider);
     final result = await showModalBottomSheet<(String, String)>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _NewHouseholdSheet(defaultName: _suggestName(profile.displayName)),
+      builder: (_) => _NewHouseholdSheet(
+        defaultName: t('onboarding.default_name', {
+          'name': profile.displayName.trim().split(' ').first,
+        }),
+      ),
     );
     if (result == null) return;
 
@@ -52,15 +57,11 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
     }
   }
 
-  static String _suggestName(String displayName) {
-    final first = displayName.trim().split(' ').first;
-    return first.isEmpty ? 'Our household' : "$first's household";
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final profile = ref.watch(profileProvider).valueOrNull;
 
     return Scaffold(
@@ -75,32 +76,29 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
                 children: [
                   const SizedBox(height: Insets.xl),
                   Text(
-                    'Hi ${profile?.displayName.split(' ').first ?? 'there'}',
+                    t('onboarding.hi', {
+                      'name': profile?.displayName.split(' ').first ?? '',
+                    }).trim(),
                     style: text.displayMedium,
                   ),
                   const SizedBox(height: Insets.sm),
                   Text(
-                    'Money is shared, so the app is too. Start a household and '
-                    'invite your partner, or join the one they already made.',
+                    t('onboarding.blurb'),
                     style: text.bodyLarge?.copyWith(color: colors.inkSecondary),
                   ),
                   const SizedBox(height: Insets.xxl),
 
                   _ChoiceCard(
                     icon: Icons.add_home_outlined,
-                    title: 'Start our household',
-                    message:
-                        'Create the shared space, then show your partner a QR '
-                        'code to join it.',
+                    title: t('onboarding.start'),
+                    message: t('onboarding.start_blurb'),
                     onTap: _busy ? null : _createHousehold,
                   ),
                   const SizedBox(height: Insets.md),
                   _ChoiceCard(
                     icon: Icons.qr_code_scanner,
-                    title: 'Join my partner',
-                    message:
-                        'Scan their QR code, or type the invite code they '
-                        'send you.',
+                    title: t('onboarding.join'),
+                    message: t('onboarding.join_blurb'),
                     onTap: _busy
                         ? null
                         : () => Navigator.of(context).push(
@@ -119,7 +117,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
                   TextButton(
                     onPressed: () =>
                         ref.read(authRepositoryProvider).signOut(),
-                    child: const Text('Sign out'),
+                    child: Text(t('auth.sign_out')),
                   ),
                 ],
               ),
@@ -186,16 +184,17 @@ class _ChoiceCard extends StatelessWidget {
 }
 
 /// Collects the household name and currency before creating it.
-class _NewHouseholdSheet extends StatefulWidget {
+class _NewHouseholdSheet extends ConsumerStatefulWidget {
   const _NewHouseholdSheet({required this.defaultName});
 
   final String defaultName;
 
   @override
-  State<_NewHouseholdSheet> createState() => _NewHouseholdSheetState();
+  ConsumerState<_NewHouseholdSheet> createState() =>
+      _NewHouseholdSheetState();
 }
 
-class _NewHouseholdSheetState extends State<_NewHouseholdSheet> {
+class _NewHouseholdSheetState extends ConsumerState<_NewHouseholdSheet> {
   late final TextEditingController _name =
       TextEditingController(text: widget.defaultName);
   String _currency = CurrencyOption.idr.code;
@@ -209,6 +208,7 @@ class _NewHouseholdSheetState extends State<_NewHouseholdSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -221,15 +221,17 @@ class _NewHouseholdSheetState extends State<_NewHouseholdSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Name your household', style: text.titleLarge),
+          Text(t('onboarding.name_household'), style: text.titleLarge),
           const SizedBox(height: Insets.lg),
           TextField(
             controller: _name,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(hintText: 'Household name'),
+            decoration: InputDecoration(
+              hintText: t('onboarding.household_name_hint'),
+            ),
           ),
           const SizedBox(height: Insets.lg),
-          Text('CURRENCY', style: text.labelSmall),
+          Text(t('onboarding.currency'), style: text.labelSmall),
           const SizedBox(height: Insets.sm),
           Wrap(
             spacing: Insets.sm,
@@ -248,7 +250,7 @@ class _NewHouseholdSheetState extends State<_NewHouseholdSheet> {
             onPressed: () => Navigator.of(context).pop(
               (_name.text.trim(), _currency),
             ),
-            child: const Text('Create household'),
+            child: Text(t('onboarding.create')),
           ),
         ],
       ),

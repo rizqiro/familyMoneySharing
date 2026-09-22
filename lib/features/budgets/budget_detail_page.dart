@@ -16,6 +16,12 @@ import '../expenses/expense_tile.dart';
 import 'budget_editor.dart';
 import 'category_editor.dart';
 
+/// One budget: its categories, its spending, and who may change what.
+///
+/// The whole screen is gated on `isController`. The controller gets the edit
+/// menu, the add-category button, and tappable rows. Everyone else gets the
+/// same figures, read-only - they can see exactly where the money went, they
+/// just cannot spend it or re-carve it.
 class BudgetDetailPage extends ConsumerWidget {
   const BudgetDetailPage({super.key, required this.budgetId});
 
@@ -25,6 +31,7 @@ class BudgetDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final summary = ref.watch(summaryProvider);
     final money = ref.watch(moneyProvider);
     final household = ref.watch(householdProvider).valueOrNull;
@@ -38,17 +45,17 @@ class BudgetDetailPage extends ConsumerWidget {
     if (view == null || household == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const EmptyState(
+        body: EmptyState(
           icon: Icons.search_off,
-          title: 'Budget not found',
-          message: 'It may have been deleted, or it belongs to another month.',
+          title: t('detail.not_found'),
+          message: t('detail.not_found_blurb'),
         ),
       );
     }
 
     final isController = view.budget.controllerId == uid;
     final controllerName = isController
-        ? 'You'
+        ? t('common.you')
         : household.displayNameOf(view.budget.controllerId);
 
     final expenses = summary.expenses
@@ -70,11 +77,14 @@ class BudgetDetailPage extends ConsumerWidget {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(value: 'edit', child: Text('Edit budget')),
+                PopupMenuItem(
+                  value: 'edit',
+                  child: Text(t('detail.edit_budget')),
+                ),
                 PopupMenuItem(
                   value: 'delete',
                   child: Text(
-                    'Delete budget',
+                    t('detail.delete_budget'),
                     style: TextStyle(color: colors.negative),
                   ),
                 ),
@@ -91,7 +101,7 @@ class BudgetDetailPage extends ConsumerWidget {
               elevation: 0,
               highlightElevation: 0,
               icon: const Icon(Icons.add),
-              label: const Text('Category'),
+              label: Text(t('common.add')),
             )
           : null,
       body: SafeArea(
@@ -110,7 +120,9 @@ class BudgetDetailPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    view.budget.isSaving ? 'PUT ASIDE' : 'SPENT',
+                    view.budget.isSaving
+                        ? t('detail.put_aside')
+                        : t('detail.spent'),
                     style: text.labelSmall?.copyWith(color: colors.inkMuted),
                   ),
                   const SizedBox(height: Insets.sm),
@@ -132,20 +144,24 @@ class BudgetDetailPage extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Stat(
-                          label: view.budget.isSaving ? 'Target' : 'Planned',
+                          label: view.budget.isSaving
+                              ? t('detail.target')
+                              : t('detail.planned'),
                           value: money.format(view.planned),
                         ),
                       ),
                       Expanded(
                         child: Stat(
-                          label: view.isOver ? 'Over by' : 'Left',
+                          label: view.isOver
+                              ? t('detail.over_by')
+                              : t('detail.left'),
                           value: money.format(view.remaining.abs()),
                           tone: view.isOver ? colors.negative : null,
                         ),
                       ),
                       Expanded(
                         child: Stat(
-                          label: 'Unallocated',
+                          label: t('detail.unallocated'),
                           value: money.format(view.unallocated),
                         ),
                       ),
@@ -163,8 +179,10 @@ class BudgetDetailPage extends ConsumerWidget {
                       ),
                       const SizedBox(width: Insets.sm),
                       Text(
-                        '$controllerName ${isController ? 'control' : 'controls'} '
-                        'the categories here',
+                        isController
+                            ? t('detail.you_control_here')
+                            : t('detail.controls_here',
+                                {'name': controllerName},),
                         style: text.bodySmall
                             ?.copyWith(color: colors.inkSecondary),
                       ),
@@ -180,15 +198,16 @@ class BudgetDetailPage extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: Insets.lg),
                 child: ErrorNote(
                   message:
-                      'Categories add up to ${money.format(view.allocated)}, '
-                      'which is more than the '
-                      '${money.format(view.planned)} plan.',
+                      t('detail.over_allocated', {
+                        'allocated': money.format(view.allocated),
+                        'planned': money.format(view.planned),
+                      }),
                 ),
               ),
 
             SectionHeader(
-              title: 'Categories',
-              action: isController ? 'Add' : null,
+              title: t('detail.categories'),
+              action: isController ? t('common.add') : null,
               onAction: () => showCategoryEditor(context, budget: view.budget),
             ),
 
@@ -196,12 +215,13 @@ class BudgetDetailPage extends ConsumerWidget {
               EmptyState(
                 icon: Icons.category_outlined,
                 compact: true,
-                title: 'No categories yet',
+                title: t('detail.no_categories'),
                 message: isController
-                    ? 'Split this budget so you both know what the money is '
-                        'meant for.'
-                    : '$controllerName has not split this budget yet.',
-                actionLabel: isController ? 'Add a category' : null,
+                    ? t('detail.no_categories_yours')
+                    : t('detail.no_categories_theirs',
+                        {'name': controllerName},),
+                actionLabel:
+                    isController ? t('detail.add_category') : null,
                 onAction: isController
                     ? () => showCategoryEditor(context, budget: view.budget)
                     : null,
@@ -233,7 +253,7 @@ class BudgetDetailPage extends ConsumerWidget {
                     const SizedBox(width: Insets.md),
                     Expanded(
                       child: Text(
-                        'Uncategorised spending',
+                        t('detail.uncategorised'),
                         style: text.bodyMedium,
                       ),
                     ),
@@ -248,15 +268,18 @@ class BudgetDetailPage extends ConsumerWidget {
             ],
 
             const SizedBox(height: Insets.xl),
-            SectionHeader(title: 'Activity (${expenses.length})'),
+            SectionHeader(
+              title: t('detail.activity', {'count': '${expenses.length}'}),
+            ),
             if (expenses.isEmpty)
               EmptyState(
                 icon: Icons.receipt_long_outlined,
                 compact: true,
-                title: 'Nothing spent from this budget yet',
+                title: t('detail.nothing_spent'),
                 message: isController
-                    ? 'Entries you file against it show up here.'
-                    : 'Entries $controllerName files against it show up here.',
+                    ? t('detail.nothing_spent_yours')
+                    : t('detail.nothing_spent_theirs',
+                        {'name': controllerName},),
               )
             else
               SoftCard(
@@ -299,26 +322,24 @@ class BudgetDetailPage extends ConsumerWidget {
   ) async {
     final householdId = ref.read(householdIdProvider);
     if (householdId == null) return;
+    final t = ref.read(textProvider);
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete ${view.budget.name}?'),
-        content: const Text(
-          'Its categories and every expense filed under it are deleted too, '
-          'for both of you. This cannot be undone.',
-        ),
+        title: Text(t('detail.delete_title', {'name': view.budget.name})),
+        content: Text(t('detail.delete_body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: context.colors.negative,
             ),
-            child: const Text('Delete'),
+            child: Text(t('common.delete')),
           ),
         ],
       ),
@@ -338,27 +359,30 @@ class BudgetDetailPage extends ConsumerWidget {
   ) async {
     final householdId = ref.read(householdIdProvider);
     if (householdId == null) return;
+    final t = ref.read(textProvider);
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Remove ${view.category.name}?'),
+        title: Text(
+          t('detail.remove_category_title', {'name': view.category.name}),
+        ),
         content: Text(
           view.spent > 0
-              ? 'The expenses stay in the ledger but stop being categorised.'
-              : 'Nothing has been spent from it yet.',
+              ? t('detail.remove_category_spent')
+              : t('detail.remove_category_empty'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: context.colors.negative,
             ),
-            child: const Text('Remove'),
+            child: Text(t('common.remove')),
           ),
         ],
       ),
@@ -393,13 +417,19 @@ class _CategoryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final category = view.category;
 
-    final (statusColor, statusIcon) = switch (category.status) {
-      AllocationStatus.pending => (colors.warning, Icons.schedule),
-      AllocationStatus.approved => (colors.positive, Icons.check_circle),
-      AllocationStatus.rejected => (colors.negative, Icons.cancel_outlined),
+    // A record pattern: three values pulled out of one switch. Keeps the
+    // colour, icon and wording for a status decided in a single place.
+    final (statusColor, statusIcon, statusKey) = switch (category.status) {
+      AllocationStatus.pending =>
+        (colors.warning, Icons.schedule, 'status.pending'),
+      AllocationStatus.approved =>
+        (colors.positive, Icons.check_circle, 'status.approved'),
+      AllocationStatus.rejected =>
+        (colors.negative, Icons.cancel_outlined, 'status.rejected'),
     };
 
     return SoftCard(
@@ -435,8 +465,10 @@ class _CategoryCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${money.format(view.spent)} of '
-                      '${money.format(view.allocated)}',
+                      t('dashboard.spent_of', {
+                        'spent': money.format(view.spent),
+                        'planned': money.format(view.allocated),
+                      }),
                       style:
                           text.bodySmall?.copyWith(color: colors.inkSecondary),
                     ),
@@ -471,7 +503,7 @@ class _CategoryCard extends ConsumerWidget {
           if (!category.isApproved) ...[
             const SizedBox(height: Insets.md),
             Tag(
-              label: category.status.label,
+              label: t(statusKey),
               icon: statusIcon,
               color: statusColor,
               filled: true,

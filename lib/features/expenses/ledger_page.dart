@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/i18n/app_text.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -31,6 +32,8 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
     final text = Theme.of(context).textTheme;
     final household = ref.watch(householdProvider).valueOrNull;
     final summary = ref.watch(summaryProvider);
+    final t = ref.watch(textProvider);
+    final locale = ref.watch(dateLocaleProvider);
     final money = ref.watch(moneyProvider);
     final uid = ref.watch(currentUidProvider);
 
@@ -53,7 +56,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ledger'),
+        title: Text(t('ledger.title')),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: Insets.page),
@@ -76,7 +79,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                 child: Row(
                   children: [
                     _FilterChip(
-                      label: 'Everyone',
+                      label: t('ledger.everyone'),
                       selected: _filterUid == null,
                       onTap: () => setState(() => _filterUid = null),
                     ),
@@ -86,7 +89,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                         padding: const EdgeInsets.only(right: Insets.sm),
                         child: _FilterChip(
                           label: id == uid
-                              ? 'You'
+                              ? t('common.you')
                               : household.displayNameOf(id).split(' ').first,
                           selected: _filterUid == id,
                           onTap: () => setState(() => _filterUid = id),
@@ -101,8 +104,8 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
               child: Row(
                 children: [
                   Text(
-                    '${expenses.length} '
-                    '${expenses.length == 1 ? 'entry' : 'entries'}',
+                    t.plural(expenses.length, 'ledger.entries_one',
+                        'ledger.entries_many',),
                     style: text.bodySmall?.copyWith(color: colors.inkMuted),
                   ),
                   const Spacer(),
@@ -117,12 +120,10 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
 
             Expanded(
               child: expenses.isEmpty
-                  ? const EmptyState(
+                  ? EmptyState(
                       icon: Icons.receipt_long_outlined,
-                      title: 'Nothing recorded yet',
-                      message:
-                          'Tap the + button to log what you spent. Your '
-                          'partner sees it straight away.',
+                      title: t('ledger.empty'),
+                      message: t('ledger.empty_blurb'),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(
@@ -147,7 +148,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                                 child: Row(
                                   children: [
                                     Text(
-                                      _dayLabel(day.$1),
+                                      _dayLabel(day.$1, t, locale),
                                       style: text.labelSmall?.copyWith(
                                         color: colors.inkMuted,
                                       ),
@@ -205,13 +206,17 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
     );
   }
 
-  static String _dayLabel(DateTime day) {
+  /// "TODAY", "YESTERDAY", or the date - in the chosen language.
+  ///
+  /// `t` and `locale` are passed in because this is `static`: it belongs to the
+  /// class rather than to an instance, so it cannot reach `ref` itself.
+  static String _dayLabel(DateTime day, AppText t, String locale) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final diff = today.difference(day).inDays;
-    if (diff == 0) return 'TODAY';
-    if (diff == 1) return 'YESTERDAY';
-    return DateFormat.MMMEd().format(day).toUpperCase();
+    if (diff == 0) return t('ledger.today');
+    if (diff == 1) return t('ledger.yesterday');
+    return DateFormat.MMMEd(locale).format(day).toUpperCase();
   }
 
   static List<(DateTime, List<Expense>)> _groupByDay(List<Expense> expenses) {

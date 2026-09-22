@@ -121,11 +121,11 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
 
     final amount = Money.parseInput(_amount.text, household.currencyCode);
     if (amount == null || amount <= 0) {
-      setState(() => _error = 'Enter an amount greater than zero.');
+      setState(() => _error = ref.read(textProvider)('expense.err_amount'));
       return;
     }
     if (_budgetId == null) {
-      setState(() => _error = 'Pick which budget this comes out of.');
+      setState(() => _error = ref.read(textProvider)('expense.err_budget'));
       return;
     }
 
@@ -183,21 +183,19 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete this expense?'),
-        content: const Text(
-          'It disappears for both of you and the totals go back down.',
-        ),
+        title: Text(ref.read(textProvider)('expense.delete_title')),
+        content: Text(ref.read(textProvider)('expense.delete_body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(ref.read(textProvider)('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: context.colors.negative,
             ),
-            child: const Text('Delete'),
+            child: Text(ref.read(textProvider)('common.delete')),
           ),
         ],
       ),
@@ -214,6 +212,8 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
+    final locale = ref.watch(dateLocaleProvider);
     final money = ref.watch(moneyProvider);
     final budgets = _budgets;
     final categories = _categoriesFor(_budgetId);
@@ -234,7 +234,7 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
               children: [
                 Expanded(
                   child: Text(
-                    _isEdit ? 'Edit expense' : 'New expense',
+                    _isEdit ? t('expense.edit') : t('expense.new'),
                     style: text.titleLarge,
                   ),
                 ),
@@ -270,11 +270,9 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
               EmptyState(
                 icon: Icons.account_balance_wallet_outlined,
                 compact: true,
-                title: 'Nothing of yours to spend from',
-                message:
-                    'An expense comes out of a budget you control. Create one, '
-                    'or ask your partner to move some money across.',
-                actionLabel: 'Request money',
+                title: t('expense.nothing_yours'),
+                message: t('expense.nothing_yours_blurb'),
+                actionLabel: t('dashboard.request_money'),
                 onAction: () {
                   // Close this sheet before opening the next, so the two do not
                   // stack on top of each other.
@@ -283,7 +281,7 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
                 },
               )
             else ...[
-              Text('BUDGET', style: text.labelSmall),
+              Text(t('expense.budget'), style: text.labelSmall),
               const SizedBox(height: Insets.sm),
               Wrap(
                 spacing: Insets.sm,
@@ -303,7 +301,7 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
               const SizedBox(height: Insets.lg),
 
               if (categories.isNotEmpty) ...[
-                Text('CATEGORY', style: text.labelSmall),
+                Text(t('expense.category'), style: text.labelSmall),
                 const SizedBox(height: Insets.sm),
                 Wrap(
                   spacing: Insets.sm,
@@ -327,9 +325,7 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
             TextField(
               controller: _note,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'What was it for? (optional)',
-              ),
+              decoration: InputDecoration(hintText: t('expense.note_hint')),
             ),
             const SizedBox(height: Insets.md),
 
@@ -344,7 +340,7 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
                 if (picked != null) setState(() => _date = picked);
               },
               icon: const Icon(Icons.calendar_today_outlined, size: 17),
-              label: Text(DateFormat.yMMMMd().format(_date)),
+              label: Text(DateFormat.yMMMMd(locale).format(_date)),
             ),
 
             if (_error != null) ...[
@@ -361,7 +357,9 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_isEdit ? 'Save changes' : 'Add expense'),
+                  : Text(_isEdit
+                      ? t('common.save_changes')
+                      : t('expense.add')),
             ),
           ],
         ),

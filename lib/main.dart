@@ -5,17 +5,37 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import 'app.dart';
+import 'core/i18n/app_language.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
+import 'state/providers.dart';
 
+/// Everything that has to happen before the first frame.
+///
+/// `main` is the very first Dart the app runs. It is `async` because both the
+/// date data and Firebase need awaiting, and `runApp` must not be called until
+/// they are ready.
 Future<void> main() async {
+  // Wires up the Flutter engine. Required before touching any plugin - without
+  // it, Firebase.initializeApp throws.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // intl ships only en_US date data compiled in; every other locale - even
-  // plain 'en' - throws LocaleDataException until this has run.
+  // intl compiles in only en_US date data; every other locale - even plain
+  // 'en' - throws LocaleDataException until this has run. With no argument it
+  // loads them all, which is a few hundred KB and saves worrying about which.
   await initializeDateFormatting();
-  Intl.defaultLocale = Intl.verifiedLocale(
+
+  // A sensible default for anyone who has not chosen a language yet. Each
+  // signed-in user's own choice overrides this - see `languageProvider`.
+  final deviceLanguage = AppLanguage.fromDeviceTag(
     WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag(),
+  );
+
+  // Dates are formatted with an explicit locale everywhere (see
+  // `dateLocaleProvider`), so this global is only a backstop for any call that
+  // forgets to pass one.
+  Intl.defaultLocale = Intl.verifiedLocale(
+    deviceLanguage.intlLocale,
     DateFormat.localeExists,
     onFailure: (_) => 'en_US',
   );
@@ -31,7 +51,20 @@ Future<void> main() async {
     return;
   }
 
-  runApp(const ProviderScope(child: FamilyMoneyApp()));
+  runApp(
+    // ProviderScope is where Riverpod keeps every provider's value. It has to
+    // sit above anything that reads one, so it wraps the whole app.
+    //
+    // `overrides` swaps a provider's value for this run. Here it feeds in the
+    // device's language, which main() knows and the provider cannot work out
+    // for itself.
+    ProviderScope(
+      overrides: [
+        deviceLanguageProvider.overrideWithValue(deviceLanguage),
+      ],
+      child: const FamilyMoneyApp(),
+    ),
+  );
 }
 
 /// Shown when Firebase could not be initialised at all.

@@ -25,9 +25,11 @@ Changing an amount later re-opens confirmation; renaming does not.
 **Log spending.** Either of you files an expense against any budget and
 category. Every entry is visible to both, immediately.
 
-**See where it went.** The overview answers "how much is left" first, then
-shows pace against the month, who spent what, and a ranked breakdown by
-category.
+**See where it went.** The overview leads with the budget *you* control, then
+the household total, then who spent what and a ranked breakdown by category.
+
+**Read it in your own language.** Indonesian, English, Banjar, Javanese or
+Sundanese — chosen per person in Settings, so the two of you can differ.
 
 ---
 
@@ -59,13 +61,17 @@ flutter run
 
 ```
 lib/
-  core/            theme, money & period formatting, shared widgets
+  core/            theme, money & date formatting, languages, shared widgets
   models/          Firestore document shapes
   data/            one repository per collection - all queries live here
   state/           Riverpod providers + PeriodSummary, the derived view model
   features/        one folder per screen area
 firebase/          security rules and composite indexes
 ```
+
+**New to Dart or Flutter?** [docs/CODE_TOUR.md](docs/CODE_TOUR.md) explains the
+language, the framework, Riverpod and Firestore from scratch, and says which
+file to open for what. The code itself is commented to match.
 
 Two things are worth knowing before changing anything:
 

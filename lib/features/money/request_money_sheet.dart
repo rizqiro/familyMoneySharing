@@ -92,19 +92,21 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
 
     final source = _findBudget(theirBudgets, _fromBudgetId);
     if (source == null) {
-      setState(() => _error = 'Choose which budget to ask from.');
+      setState(() => _error = ref.read(textProvider)('request.err_source'));
       return;
     }
 
     final amount = Money.parseInput(_amount.text, household.currencyCode);
     if (amount == null || amount <= 0) {
-      setState(() => _error = 'Enter an amount greater than zero.');
+      setState(() => _error = ref.read(textProvider)('request.err_amount'));
       return;
     }
     if (amount > source.remaining) {
       setState(
-        () => _error = 'Only ${ref.read(moneyProvider).format(source.remaining)} '
-            'is left in ${source.budget.name}.',
+        () => _error = ref.read(textProvider)('request.err_too_much', {
+          'amount': ref.read(moneyProvider).format(source.remaining),
+          'budget': source.budget.name,
+        }),
       );
       return;
     }
@@ -115,11 +117,12 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
     // first.
     final needsNewBudget = myBudgets.isEmpty;
     if (needsNewBudget && _newBudgetName.text.trim().isEmpty) {
-      setState(() => _error = 'Name the budget this should land in.');
+      setState(() => _error = ref.read(textProvider)('request.err_name'));
       return;
     }
     if (!needsNewBudget && _toBudgetId == null) {
-      setState(() => _error = 'Choose where it should land.');
+      setState(
+          () => _error = ref.read(textProvider)('request.err_destination'));
       return;
     }
 
@@ -183,7 +186,12 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
       Navigator.of(context).pop();
       showToast(
         context,
-        'Sent to ${household.displayNameOf(source.budget.controllerId).split(' ').first}.',
+        ref.read(textProvider)('request.sent_to', {
+          'name': household
+              .displayNameOf(source.budget.controllerId)
+              .split(' ')
+              .first,
+        }),
       );
     } catch (e) {
       if (mounted) setState(() => _error = '$e');
@@ -204,6 +212,7 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final summary = ref.watch(summaryProvider);
     final partner = ref.watch(partnerProvider);
@@ -212,7 +221,8 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
         summary.theirMonthly.where((b) => !b.budget.isSaving).toList();
     final myBudgets = summary.myMonthly;
     final selectedSource = _findBudget(theirBudgets, _fromBudgetId);
-    final partnerName = partner?.displayName.split(' ').first ?? 'your partner';
+    final partnerName =
+        partner?.displayName.split(' ').first ?? t('common.partner');
 
     if (theirBudgets.isEmpty) {
       return Padding(
@@ -220,10 +230,10 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
         child: EmptyState(
           icon: Icons.account_balance_wallet_outlined,
           compact: true,
-          title: 'Nothing to ask for yet',
+          title: t('request.none_title'),
           message: partner == null
-              ? 'Connect your partner first, then you can ask them for money.'
-              : '$partnerName has no monthly budget to move money out of.',
+              ? t('request.none_unpaired')
+              : t('request.none_blurb', {'name': partnerName}),
         ),
       );
     }
@@ -242,15 +252,15 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Request money', style: text.titleLarge),
+            Text(t('request.title'), style: text.titleLarge),
             const SizedBox(height: Insets.xs),
             Text(
-              'From a budget $partnerName controls',
+              t('request.subtitle', {'name': partnerName}),
               style: text.bodySmall?.copyWith(color: colors.inkSecondary),
             ),
             const SizedBox(height: Insets.lg),
 
-            Text('FROM', style: text.labelSmall),
+            Text(t('request.from'), style: text.labelSmall),
             const SizedBox(height: Insets.sm),
             Wrap(
               spacing: Insets.sm,
@@ -268,14 +278,16 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
             if (selectedSource != null) ...[
               const SizedBox(height: Insets.sm),
               Text(
-                '${money.format(selectedSource.remaining)} left in '
-                '${selectedSource.budget.name}',
+                t('request.left_in', {
+                  'amount': money.format(selectedSource.remaining),
+                  'budget': selectedSource.budget.name,
+                }),
                 style: text.bodySmall?.copyWith(color: colors.inkSecondary),
               ),
             ],
             const SizedBox(height: Insets.lg),
 
-            Text('AMOUNT', style: text.labelSmall),
+            Text(t('request.amount'), style: text.labelSmall),
             const SizedBox(height: Insets.sm),
             TextField(
               controller: _amount,
@@ -292,31 +304,28 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
             ),
             const SizedBox(height: Insets.lg),
 
-            Text('WHAT FOR', style: text.labelSmall),
+            Text(t('request.what_for'), style: text.labelSmall),
             const SizedBox(height: Insets.sm),
             TextField(
               controller: _reason,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'School shoes, petrol…',
-              ),
+              decoration:
+                  InputDecoration(hintText: t('request.what_for_hint')),
             ),
             const SizedBox(height: Insets.lg),
 
-            Text('LANDS IN', style: text.labelSmall),
+            Text(t('request.lands_in'), style: text.labelSmall),
             const SizedBox(height: Insets.sm),
             if (myBudgets.isEmpty) ...[
               TextField(
                 controller: _newBudgetName,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Name a budget of your own',
-                ),
+                decoration:
+                    InputDecoration(hintText: t('request.name_budget_hint')),
               ),
               const SizedBox(height: Insets.sm),
               Text(
-                'You control nothing yet, so this creates a budget for you to '
-                'receive it into.',
+                t('request.creates_budget'),
                 style: text.bodySmall?.copyWith(color: colors.inkSecondary),
               ),
             ] else
@@ -351,9 +360,7 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
                   const SizedBox(width: Insets.sm),
                   Expanded(
                     child: Text(
-                      '$partnerName confirms this in their Inbox. If they '
-                      'agree, the money moves into your budget — you still '
-                      'never spend from theirs.',
+                      t('request.partner_confirms', {'name': partnerName}),
                       style:
                           text.bodySmall?.copyWith(color: colors.inkSecondary),
                     ),
@@ -383,7 +390,7 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Send request'),
+                  : Text(t('request.send')),
             ),
           ],
         ),

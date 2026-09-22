@@ -4,6 +4,16 @@ import '../models/budget.dart';
 import '../models/spend_category.dart';
 import 'firestore_refs.dart';
 
+/// Every query and write for budgets.
+///
+/// A budget is a pot of money with exactly one controller. Monthly budgets are
+/// scoped to a month; saving pots carry across months and use the sentinel
+/// `periodKey` of "saving" so one query picks up both kinds at once.
+///
+/// Note [delete]: removing a budget also removes its categories, its expenses
+/// and its approvals. Firestore has no cascade, so the sweep is done here by
+/// hand in a batch - without it the ledger would keep rows pointing at a budget
+/// that no longer exists.
 class BudgetRepository {
   BudgetRepository(this.db, this._refs);
 

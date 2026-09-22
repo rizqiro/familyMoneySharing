@@ -65,13 +65,15 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
 
     final name = _name.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Name the category.');
+      setState(
+          () => _error = ref.read(textProvider)('category_editor.err_name'),);
       return;
     }
 
     final amount = Money.parseInput(_amount.text, household.currencyCode);
     if (amount == null || amount <= 0) {
-      setState(() => _error = 'Allocate an amount greater than zero.');
+      setState(
+          () => _error = ref.read(textProvider)('category_editor.err_amount'),);
       return;
     }
 
@@ -115,8 +117,9 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
       if (partnerUid != null) {
         showToast(
           context,
-          'Sent to ${household.displayNameOf(partnerUid).split(' ').first} '
-          'to confirm.',
+          ref.read(textProvider)('category_editor.sent_to', {
+            'name': household.displayNameOf(partnerUid).split(' ').first,
+          }),
         );
       }
     } catch (e) {
@@ -130,6 +133,7 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final partner = ref.watch(partnerProvider);
 
@@ -146,12 +150,12 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              _isEdit ? 'Edit category' : 'New category',
+              _isEdit ? t('category_editor.edit') : t('category_editor.new'),
               style: text.titleLarge,
             ),
             const SizedBox(height: Insets.xs),
             Text(
-              'In ${widget.budget.name}',
+              t('category_editor.in_budget', {'budget': widget.budget.name}),
               style: text.bodySmall?.copyWith(color: colors.inkSecondary),
             ),
             const SizedBox(height: Insets.lg),
@@ -168,8 +172,8 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
                     controller: _name,
                     autofocus: !_isEdit,
                     textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      hintText: 'Category name',
+                    decoration: InputDecoration(
+                      hintText: t('category_editor.name_hint'),
                     ),
                   ),
                 ),
@@ -194,7 +198,7 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
             ),
             const SizedBox(height: Insets.lg),
 
-            Text('ALLOCATION', style: text.labelSmall),
+            Text(t('category_editor.allocation'), style: text.labelSmall),
             const SizedBox(height: Insets.sm),
             TextField(
               controller: _amount,
@@ -224,8 +228,9 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
                     const SizedBox(width: Insets.sm),
                     Expanded(
                       child: Text(
-                        '${partner.displayName.split(' ').first} gets asked to '
-                        'confirm this allocation.',
+                        t('category_editor.will_ask', {
+                          'name': partner.displayName.split(' ').first,
+                        }),
                         style: text.bodySmall
                             ?.copyWith(color: colors.inkSecondary),
                       ),
@@ -251,8 +256,12 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
                     )
                   : Text(
                       partner == null
-                          ? (_isEdit ? 'Save changes' : 'Add category')
-                          : (_isEdit ? 'Save and ask again' : 'Send for confirmation'),
+                          ? (_isEdit
+                              ? t('common.save_changes')
+                              : t('category_editor.add'))
+                          : (_isEdit
+                              ? t('category_editor.save_and_ask')
+                              : t('category_editor.send')),
                     ),
             ),
           ],

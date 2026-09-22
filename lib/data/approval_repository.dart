@@ -4,6 +4,13 @@ import '../models/approval.dart';
 import '../models/spend_category.dart';
 import 'firestore_refs.dart';
 
+/// The inbox side of category allocations.
+///
+/// An approval mirrors a decision rather than owning it: [decide] writes the
+/// new status onto the approval AND onto its category in one batch, so the two
+/// can never disagree. There is deliberately no "withdraw" - deleting a request
+/// would strand its category as pending forever, with nothing left to resolve
+/// it. Editing the category supersedes the request instead.
 class ApprovalRepository {
   ApprovalRepository(this.db, this._refs);
 

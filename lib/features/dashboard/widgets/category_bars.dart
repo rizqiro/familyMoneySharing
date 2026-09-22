@@ -15,11 +15,17 @@ class CategoryBars extends StatelessWidget {
     super.key,
     required this.categories,
     required this.money,
+    required this.otherLabel,
     this.maxRows = 6,
   });
 
   final List<CategoryView> categories;
   final Money money;
+
+  /// What the folded-together remainder is called, already translated and with
+  /// its count filled in. Passed in so this widget stays a plain chart.
+  final String otherLabel;
+
   final int maxRows;
 
   @override
@@ -108,7 +114,7 @@ class CategoryBars extends StatelessWidget {
         for (final c in shown)
           row(c.category.name, c.category.emoji, c.spent, false),
         if (rest.isNotEmpty)
-          row('Other (${rest.length})', '…', otherTotal, true),
+          row(otherLabel, '…', otherTotal, true),
       ],
     );
   }

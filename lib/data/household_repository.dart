@@ -15,6 +15,13 @@ class HouseholdFailure implements Exception {
   String toString() => message;
 }
 
+/// Households, and the pairing handshake that joins two accounts.
+///
+/// The interesting part is [acceptInvite]. The joiner is not a member yet, so
+/// membership cannot be the permission check - possession of a live invite code
+/// is. The code travels in the write itself (`joinedVia`) and the security
+/// rules read it back to verify. That is also why the household document is
+/// deliberately NOT read there: only members may read one.
 class HouseholdRepository {
   HouseholdRepository(this.db, this._refs);
 

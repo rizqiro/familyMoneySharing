@@ -7,6 +7,15 @@ import '../../core/widgets/common.dart';
 import '../../data/auth_repository.dart';
 import '../../state/providers.dart';
 
+/// Sign in and sign up, in one screen.
+///
+/// One screen rather than two because the fields are nearly identical - sign-up
+/// adds a name - and a toggle is less friction than a second route.
+///
+/// Uses `Form` plus `TextFormField`: each field carries its own `validator`, and
+/// `_formKey.currentState!.validate()` runs them all and shows any errors in
+/// place. Firebase errors are turned into readable sentences by `AuthRepository`
+/// before they reach here.
 enum _Mode { signIn, signUp }
 
 class SignInPage extends ConsumerStatefulWidget {
@@ -46,14 +55,22 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
     try {
       final auth = ref.read(authRepositoryProvider);
+      // The device's language seeds a brand-new profile, so the app is already
+      // in the right language before anyone visits Settings.
+      final language = ref.read(deviceLanguageProvider);
       if (_isSignUp) {
         await auth.signUp(
           name: _name.text,
           email: _email.text,
           password: _password.text,
+          language: language,
         );
       } else {
-        await auth.signIn(email: _email.text, password: _password.text);
+        await auth.signIn(
+          email: _email.text,
+          password: _password.text,
+          language: language,
+        );
       }
       // The auth gate swaps the screen out; nothing to navigate here.
     } on AuthFailure catch (e) {
@@ -66,12 +83,18 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   Future<void> _resetPassword() async {
     final email = _email.text.trim();
     if (email.isEmpty) {
-      setState(() => _error = 'Enter your email first, then tap reset.');
+      setState(
+          () => _error = ref.read(textProvider)('auth.reset_need_email'),);
       return;
     }
     try {
       await ref.read(authRepositoryProvider).sendPasswordReset(email);
-      if (mounted) showToast(context, 'Reset link sent to $email');
+      if (mounted) {
+        showToast(
+          context,
+          ref.read(textProvider)('auth.reset_sent', {'email': email}),
+        );
+      }
     } on AuthFailure catch (e) {
       if (mounted) setState(() => _error = e.message);
     }
@@ -81,6 +104,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -98,12 +122,10 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: Insets.xl),
-                    Text('Family Money', style: text.displayMedium),
+                    Text(t('auth.app_name'), style: text.displayMedium),
                     const SizedBox(height: Insets.sm),
                     Text(
-                      _isSignUp
-                          ? 'One shared picture of where your money goes.'
-                          : 'Welcome back.',
+                      _isSignUp ? t('auth.tagline') : t('auth.welcome_back'),
                       style: text.bodyLarge?.copyWith(
                         color: colors.inkSecondary,
                       ),
@@ -115,11 +137,11 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         controller: _name,
                         textCapitalization: TextCapitalization.words,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          hintText: 'Your name',
+                        decoration: InputDecoration(
+                          hintText: t('auth.name_hint'),
                         ),
                         validator: (v) => (v ?? '').trim().isEmpty
-                            ? 'Tell us what to call you'
+                            ? t('auth.err_name')
                             : null,
                       ),
                       const SizedBox(height: Insets.md),
@@ -130,12 +152,13 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(hintText: 'Email'),
+                      decoration:
+                          InputDecoration(hintText: t('auth.email_hint')),
                       validator: (v) {
                         final value = (v ?? '').trim();
-                        if (value.isEmpty) return 'Enter your email';
+                        if (value.isEmpty) return t('auth.err_email_empty');
                         if (!value.contains('@') || !value.contains('.')) {
-                          return 'That does not look like an email';
+                          return t('auth.err_email_invalid');
                         }
                         return null;
                       },
@@ -148,7 +171,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        hintText: 'Password',
+                        hintText: t('auth.password_hint'),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscure
@@ -163,9 +186,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       ),
                       validator: (v) {
                         final value = v ?? '';
-                        if (value.isEmpty) return 'Enter your password';
+                        if (value.isEmpty) return t('auth.err_password_empty');
                         if (_isSignUp && value.length < 6) {
-                          return 'Use at least 6 characters';
+                          return t('auth.err_password_short');
                         }
                         return null;
                       },
@@ -176,7 +199,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: _busy ? null : _resetPassword,
-                          child: const Text('Forgot password'),
+                          child: Text(t('auth.forgot_password')),
                         ),
                       ),
 
@@ -194,7 +217,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(_isSignUp ? 'Create account' : 'Sign in'),
+                          : Text(_isSignUp
+                              ? t('auth.create_account')
+                              : t('auth.sign_in')),
                     ),
                     const SizedBox(height: Insets.lg),
 
@@ -208,8 +233,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                               }),
                       child: Text(
                         _isSignUp
-                            ? 'I already have an account'
-                            : 'Create an account',
+                            ? t('auth.have_account')
+                            : t('auth.no_account'),
                       ),
                     ),
                   ],

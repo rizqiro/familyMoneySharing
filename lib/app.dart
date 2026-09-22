@@ -88,6 +88,7 @@ class _Fatal extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(textProvider);
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -98,9 +99,9 @@ class _Fatal extends ConsumerWidget {
               children: [
                 EmptyState(
                   icon: Icons.cloud_off_outlined,
-                  title: 'Could not reach your data',
+                  title: t('app.cannot_reach'),
                   message: message,
-                  actionLabel: 'Sign out',
+                  actionLabel: t('auth.sign_out'),
                   onAction: () =>
                       ref.read(authRepositoryProvider).signOut(),
                 ),
