@@ -51,7 +51,11 @@ class AppColors extends ThemeExtension<AppColors> {
     surfaceSunken: Color(0xFFF1F1EE),
     ink: Color(0xFF0B0B0B),
     inkSecondary: Color(0xFF52514E),
-    inkMuted: Color(0xFF898781),
+    // Darker than the obvious mid-grey on purpose. The muted tone carries
+    // 11-12px eyebrows and captions, and anything lighter than this falls under
+    // the 4.5:1 contrast needed for small text on white. The dark-mode value
+    // below is lighter because it sits on a dark surface.
+    inkMuted: Color(0xFF6B6964),
     hairline: Color(0xFFE6E5E0),
     accent: Color(0xFF0B0B0B),
     onAccent: Color(0xFFFFFFFF),

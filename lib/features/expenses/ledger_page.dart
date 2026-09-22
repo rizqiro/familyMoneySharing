@@ -41,6 +41,13 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
     final expenses = _filterUid == null
         ? summary.expenses
         : summary.expenses.where((e) => e.spentBy == _filterUid).toList();
+
+    // Everyone sees every entry, but only the controller of a budget may
+    // correct what was filed against it. A Set is used rather than a list
+    // because this is looked up once per row and Set membership is constant
+    // time.
+    final editableBudgetIds =
+        summary.spendable.map((b) => b.budget.id).toSet();
     final total = expenses.fold(0.0, (sum, e) => sum + e.amount);
     final grouped = _groupByDay(expenses);
 
@@ -174,10 +181,13 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                                       ExpenseTile(
                                         expense: day.$2[i],
                                         showDate: false,
-                                        onTap: () => showExpenseEditor(
-                                          context,
-                                          existing: day.$2[i],
-                                        ),
+                                        onTap: editableBudgetIds
+                                                .contains(day.$2[i].budgetId)
+                                            ? () => showExpenseEditor(
+                                                  context,
+                                                  existing: day.$2[i],
+                                                )
+                                            : null,
                                       ),
                                     ],
                                   ],
