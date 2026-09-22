@@ -59,7 +59,12 @@ class Period {
 
   bool get isCurrent => this == Period.current();
 
-  String label({String locale = 'en'}) =>
+  /// "September 2026", in the given locale.
+  ///
+  /// The locale is passed in rather than read from a global so the month name
+  /// always matches the language the rest of the screen is in. See
+  /// `dateLocaleProvider`.
+  String label(String locale) =>
       DateFormat.yMMMM(locale).format(DateTime(year, month));
 
   @override

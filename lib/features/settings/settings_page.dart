@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format/money.dart';
+import '../../core/i18n/app_language.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -9,6 +10,15 @@ import '../../core/widgets/soft_card.dart';
 import '../../state/providers.dart';
 import '../pairing/invite_page.dart';
 
+/// Everything adjustable, in three groups.
+///
+/// The grouping follows who a setting belongs to:
+///
+///   * **Partner / Household** - shared. Changing the currency changes it for
+///     both of you, because the money is shared.
+///   * **Preferences** - yours alone. Language lives here: one of you can read
+///     the app in Banjar while the other reads Indonesian.
+///   * **Account** - signing out and unlinking.
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -16,16 +26,18 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final profile = ref.watch(profileProvider).valueOrNull;
     final household = ref.watch(householdProvider).valueOrNull;
     final partner = ref.watch(partnerProvider);
+    final language = ref.watch(languageProvider);
 
     if (profile == null || household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(t('settings.title'))),
       body: SafeArea(
         top: false,
         child: ListView(
@@ -49,23 +61,27 @@ class SettingsPage extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           profile.email,
-                          style: text.bodySmall
-                              ?.copyWith(color: colors.inkMuted),
+                          style:
+                              text.bodySmall?.copyWith(color: colors.inkMuted),
                         ),
                       ],
                     ),
                   ),
                   TextButton(
-                    onPressed: () => _editName(context, ref, profile.uid,
-                        profile.displayName,),
-                    child: const Text('Edit'),
+                    onPressed: () => _editName(
+                      context,
+                      ref,
+                      profile.uid,
+                      profile.displayName,
+                    ),
+                    child: Text(t('common.edit')),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: Insets.xl),
 
-            const SectionHeader(title: 'Partner'),
+            SectionHeader(title: t('settings.partner')),
             if (partner == null)
               SoftCard(
                 onTap: () => Navigator.of(context).push(
@@ -76,8 +92,10 @@ class SettingsPage extends ConsumerWidget {
                     Icon(Icons.person_add_alt, size: 20, color: colors.ink),
                     const SizedBox(width: Insets.md),
                     Expanded(
-                      child: Text('Invite your partner',
-                          style: text.bodyLarge,),
+                      child: Text(
+                        t('settings.invite_partner'),
+                        style: text.bodyLarge,
+                      ),
                     ),
                     Icon(
                       Icons.chevron_right,
@@ -108,7 +126,7 @@ class SettingsPage extends ConsumerWidget {
                       ),
                     ),
                     Tag(
-                      label: 'Connected',
+                      label: t('settings.connected'),
                       icon: Icons.link,
                       color: colors.positive,
                       filled: true,
@@ -118,55 +136,86 @@ class SettingsPage extends ConsumerWidget {
               ),
             const SizedBox(height: Insets.xl),
 
-            const SectionHeader(title: 'Household'),
+            SectionHeader(title: t('settings.household')),
             GroupedCard(
               children: [
                 ListTile(
-                  title: const Text('Name'),
+                  title: Text(t('settings.name')),
                   subtitle: Text(household.name),
                   trailing: Icon(Icons.chevron_right, color: colors.inkMuted),
-                  onTap: () => _editHouseholdName(context, ref, household.id,
-                      household.name,),
+                  onTap: () => _editHouseholdName(
+                    context,
+                    ref,
+                    household.id,
+                    household.name,
+                  ),
                 ),
                 ListTile(
-                  title: const Text('Currency'),
+                  title: Text(t('settings.currency')),
                   subtitle: Text(household.currencyCode),
                   trailing: Icon(Icons.chevron_right, color: colors.inkMuted),
-                  onTap: () =>
-                      _pickCurrency(context, ref, household.id,
-                          household.currencyCode,),
+                  onTap: () => _pickCurrency(
+                    context,
+                    ref,
+                    household.id,
+                    household.currencyCode,
+                  ),
                 ),
                 ListTile(
-                  title: const Text('Month starts on'),
+                  title: Text(t('settings.month_starts')),
                   subtitle: Text(
                     household.monthStartDay == 1
-                        ? 'The 1st (calendar month)'
-                        : 'Day ${household.monthStartDay}',
+                        ? t('settings.month_first')
+                        : t('settings.month_day',
+                            {'day': '${household.monthStartDay}'}),
                   ),
                   trailing: Icon(Icons.chevron_right, color: colors.inkMuted),
-                  onTap: () => _pickStartDay(context, ref, household.id,
-                      household.monthStartDay,),
+                  onTap: () => _pickStartDay(
+                    context,
+                    ref,
+                    household.id,
+                    household.monthStartDay,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: Insets.xl),
 
-            const SectionHeader(title: 'Account'),
+            // Yours alone, not the household's - hence its own section.
+            SectionHeader(title: t('settings.preferences')),
             GroupedCard(
               children: [
                 ListTile(
-                  title: const Text('Sign out'),
+                  leading: Icon(Icons.translate, color: colors.inkSecondary),
+                  title: Text(t('settings.language')),
+                  subtitle: Text(language.endonym),
+                  trailing: Icon(Icons.chevron_right, color: colors.inkMuted),
+                  onTap: () => _pickLanguage(context, ref, profile.uid, language),
+                ),
+              ],
+            ),
+            const SizedBox(height: Insets.xl),
+
+            SectionHeader(title: t('settings.account')),
+            GroupedCard(
+              children: [
+                ListTile(
+                  title: Text(t('auth.sign_out')),
                   leading: Icon(Icons.logout, color: colors.inkSecondary),
                   onTap: () => ref.read(authRepositoryProvider).signOut(),
                 ),
                 ListTile(
                   title: Text(
-                    'Leave household',
+                    t('settings.leave'),
                     style: TextStyle(color: colors.negative),
                   ),
                   leading: Icon(Icons.link_off, color: colors.negative),
-                  onTap: () => _confirmLeave(context, ref, household.id,
-                      profile.uid,),
+                  onTap: () => _confirmLeave(
+                    context,
+                    ref,
+                    household.id,
+                    profile.uid,
+                  ),
                 ),
               ],
             ),
@@ -174,7 +223,7 @@ class SettingsPage extends ConsumerWidget {
 
             Center(
               child: Text(
-                'Family Money',
+                t('auth.app_name'),
                 style: text.bodySmall?.copyWith(color: colors.inkMuted),
               ),
             ),
@@ -184,16 +233,62 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+  /// The language picker.
+  ///
+  /// Each row shows the language's own name first and the English name
+  /// underneath, so someone who has accidentally switched to a language they
+  /// cannot read can still find their way back.
+  Future<void> _pickLanguage(
+    BuildContext context,
+    WidgetRef ref,
+    String uid,
+    AppLanguage current,
+  ) async {
+    final colors = context.colors;
+
+    final picked = await showModalBottomSheet<AppLanguage>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: Insets.sm),
+          children: [
+            for (final language in AppLanguage.values)
+              ListTile(
+                title: Text(language.endonym),
+                subtitle: Text(language.englishName),
+                trailing: language == current
+                    ? Icon(Icons.check, size: 18, color: colors.ink)
+                    : null,
+                onTap: () => Navigator.of(context).pop(language),
+              ),
+          ],
+        ),
+      ),
+    );
+
+    // Nothing to do if the sheet was dismissed or the same one was tapped.
+    if (picked == null || picked == current) return;
+
+    // Writing to Firestore is all it takes: the profile stream emits, the
+    // language provider recomputes, and every screen redraws in the new
+    // language. Nothing here has to tell the UI to update.
+    await ref.read(authRepositoryProvider).setLanguage(uid, picked);
+  }
+
   Future<void> _editName(
     BuildContext context,
     WidgetRef ref,
     String uid,
     String current,
   ) async {
+    final t = ref.read(textProvider);
     final value = await _promptText(
       context,
-      title: 'Your name',
+      title: t('settings.your_name'),
       initial: current,
+      saveLabel: t('common.save'),
+      cancelLabel: t('common.cancel'),
     );
     if (value == null || value.trim().isEmpty) return;
     await ref.read(authRepositoryProvider).updateDisplayName(uid, value);
@@ -205,10 +300,13 @@ class SettingsPage extends ConsumerWidget {
     String householdId,
     String current,
   ) async {
+    final t = ref.read(textProvider);
     final value = await _promptText(
       context,
-      title: 'Household name',
+      title: t('settings.household_name'),
       initial: current,
+      saveLabel: t('common.save'),
+      cancelLabel: t('common.cancel'),
     );
     if (value == null || value.trim().isEmpty) return;
     await ref
@@ -252,6 +350,7 @@ class SettingsPage extends ConsumerWidget {
     String householdId,
     int current,
   ) async {
+    final t = ref.read(textProvider);
     final picked = await showModalBottomSheet<int>(
       context: context,
       builder: (context) => SafeArea(
@@ -267,16 +366,20 @@ class SettingsPage extends ConsumerWidget {
                 Insets.md,
               ),
               child: Text(
-                'If you budget from payday rather than the 1st, set that day '
-                'here. Expenses land in the right month automatically.',
+                t('settings.month_blurb'),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
-            // 28 is the last day every month is guaranteed to have.
+            // Stops at 28: it is the last day every month is guaranteed to
+            // have, so a period can never land on a date that does not exist.
             for (var day = 1; day <= 28; day++)
               ListTile(
                 dense: true,
-                title: Text(day == 1 ? '1st (calendar month)' : 'Day $day'),
+                title: Text(
+                  day == 1
+                      ? t('settings.month_first')
+                      : t('settings.month_day', {'day': '$day'}),
+                ),
                 trailing:
                     day == current ? const Icon(Icons.check, size: 18) : null,
                 onTap: () => Navigator.of(context).pop(day),
@@ -297,29 +400,29 @@ class SettingsPage extends ConsumerWidget {
     String householdId,
     String uid,
   ) async {
+    final t = ref.read(textProvider);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave this household?'),
-        content: const Text(
-          'You stop seeing the shared budgets and ledger. Everything stays '
-          'with your partner, and you can be invited back.',
-        ),
+        title: Text(t('settings.leave_title')),
+        content: Text(t('settings.leave_body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('common.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: context.colors.negative,
             ),
-            child: const Text('Leave'),
+            child: Text(t('settings.leave_cta')),
           ),
         ],
       ),
     );
+    // `context.mounted` matters after an await: the user may have navigated
+    // away while the dialog was open, and using a dead context throws.
     if (confirmed != true || !context.mounted) return;
 
     await ref
@@ -332,6 +435,8 @@ class SettingsPage extends ConsumerWidget {
     BuildContext context, {
     required String title,
     required String initial,
+    required String saveLabel,
+    required String cancelLabel,
   }) {
     final controller = TextEditingController(text: initial);
     return showDialog<String>(
@@ -346,11 +451,11 @@ class SettingsPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(cancelLabel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Save'),
+            child: Text(saveLabel),
           ),
         ],
       ),

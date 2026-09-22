@@ -13,10 +13,17 @@ enum AllocationStatus {
         orElse: () => AllocationStatus.pending,
       );
 
-  String get label => switch (this) {
-        AllocationStatus.pending => 'Awaiting confirmation',
-        AllocationStatus.approved => 'Confirmed',
-        AllocationStatus.rejected => 'Declined',
+  /// The translation key for this status, looked up with `t(...)` at the point
+  /// it is displayed.
+  ///
+  /// The model returns a KEY rather than a sentence on purpose: a model that
+  /// held English text would be unusable in the other four languages, and
+  /// reaching for the translation table from here would tie the data layer to
+  /// whichever language the screen happens to be in.
+  String get labelKey => switch (this) {
+        AllocationStatus.pending => 'status.pending',
+        AllocationStatus.approved => 'status.approved',
+        AllocationStatus.rejected => 'status.rejected',
       };
 }
 

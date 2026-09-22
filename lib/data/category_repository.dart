@@ -4,6 +4,15 @@ import '../models/approval.dart';
 import '../models/spend_category.dart';
 import 'firestore_refs.dart';
 
+/// Categories, and the confirmation they trigger.
+///
+/// A category is a slice of a budget. Only the budget's controller creates one,
+/// and the other member confirms the amount before it counts as agreed.
+///
+/// The category and its approval request are always written in the same batch,
+/// so the allocation and the ask can never drift apart. Editing an amount
+/// re-opens confirmation and supersedes the old request; renaming does not,
+/// because nothing about the money changed.
 class CategoryRepository {
   CategoryRepository(this.db, this._refs);
 

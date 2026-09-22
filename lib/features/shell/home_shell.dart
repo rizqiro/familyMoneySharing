@@ -38,6 +38,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final t = ref.watch(textProvider);
     final pending = ref.watch(pendingApprovalCountProvider);
 
     // No budget of your own means nothing to file an expense against, so the
@@ -53,10 +54,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           if (canSpend) {
             showExpenseEditor(context);
           } else {
-            showToast(
-              context,
-              'Create a budget of your own first, or ask for money.',
-            );
+            showToast(context, t('shell.need_budget'));
           }
         },
         backgroundColor: canSpend ? colors.accent : colors.track,
@@ -76,20 +74,20 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           // rebuild. Without it the field changes but the screen does not.
           onDestinationSelected: (i) => setState(() => _index = i),
           destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.pie_chart_outline),
-              selectedIcon: Icon(Icons.pie_chart),
-              label: 'Overview',
+            NavigationDestination(
+              icon: const Icon(Icons.pie_chart_outline),
+              selectedIcon: const Icon(Icons.pie_chart),
+              label: t('shell.tab_overview'),
             ),
-            const NavigationDestination(
-              icon: Icon(Icons.account_balance_wallet_outlined),
-              selectedIcon: Icon(Icons.account_balance_wallet),
-              label: 'Budgets',
+            NavigationDestination(
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              selectedIcon: const Icon(Icons.account_balance_wallet),
+              label: t('shell.tab_budgets'),
             ),
-            const NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long),
-              label: 'Ledger',
+            NavigationDestination(
+              icon: const Icon(Icons.receipt_long_outlined),
+              selectedIcon: const Icon(Icons.receipt_long),
+              label: t('shell.tab_ledger'),
             ),
             NavigationDestination(
               // Counts both kinds of pending decision: category allocations and
@@ -106,7 +104,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 backgroundColor: colors.negative,
                 child: const Icon(Icons.inbox),
               ),
-              label: 'Inbox',
+              label: t('shell.tab_inbox'),
             ),
           ],
         ),

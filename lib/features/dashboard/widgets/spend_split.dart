@@ -15,11 +15,25 @@ class SpendSplit extends StatelessWidget {
     required this.household,
     required this.spendByMember,
     required this.money,
+    required this.youLabel,
+    required this.viewerUid,
+    required this.emptyLabel,
   });
 
   final Household household;
   final Map<String, double> spendByMember;
   final Money money;
+
+  /// What to call the viewer - "You" / "Kamu" / "Pian", depending on language.
+  /// Passed in rather than looked up here so this widget stays a plain chart
+  /// with no dependency on providers.
+  final String youLabel;
+
+  /// Who is looking, so their own row reads "You" rather than their name.
+  final String? viewerUid;
+
+  /// Shown instead of the chart when nothing has been spent yet.
+  final String emptyLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +46,7 @@ class SpendSplit extends StatelessWidget {
     final total = entries.fold(0.0, (sum, e) => sum + e.$2);
     if (total <= 0) {
       return Text(
-        'Nothing spent yet this month.',
+        emptyLabel,
         style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
       );
     }
@@ -87,7 +101,9 @@ class SpendSplit extends StatelessWidget {
                 const SizedBox(width: Insets.sm),
                 Expanded(
                   child: Text(
-                    household.displayNameOf(entries[i].$1),
+                    entries[i].$1 == viewerUid
+                        ? youLabel
+                        : household.displayNameOf(entries[i].$1),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: text.bodyMedium,

@@ -15,6 +15,8 @@ class PeriodSwitcher extends ConsumerWidget {
     final colors = context.colors;
     final period = ref.watch(selectedPeriodProvider);
     final controller = ref.read(selectedPeriodProvider.notifier);
+    // The month name follows the chosen interface language, not the phone's.
+    final locale = ref.watch(dateLocaleProvider);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: Insets.xs),
@@ -31,7 +33,7 @@ class PeriodSwitcher extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: Insets.sm),
               child: Text(
-                period.label(),
+                period.label(locale),
                 style: Theme.of(context).textTheme.labelMedium,
               ),
             ),

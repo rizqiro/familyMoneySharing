@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/expense.dart';
@@ -25,6 +26,8 @@ class ExpenseTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
+    final locale = ref.watch(dateLocaleProvider);
     final money = ref.watch(moneyProvider);
     final household = ref.watch(householdProvider).valueOrNull;
     final uid = ref.watch(currentUidProvider);
@@ -34,16 +37,17 @@ class ExpenseTile extends ConsumerWidget {
 
     final title = expense.note.trim().isNotEmpty
         ? expense.note.trim()
-        : (category?.name ?? budget?.name ?? 'Expense');
+        : (category?.name ?? budget?.name ?? t('expense.new'));
 
     final spender = expense.spentBy == uid
-        ? 'You'
-        : (household?.displayNameOf(expense.spentBy) ?? 'Partner');
+        ? t('common.you')
+        : (household?.displayNameOf(expense.spentBy) ??
+            t('common.partner'));
 
     final subtitle = [
       spender,
       if (category != null) category.name,
-      if (showDate) DateFormat.MMMd().format(expense.spentAt),
+      if (showDate) DateFormat.MMMd(locale).format(expense.spentAt),
     ].join(' · ');
 
     return InkWell(

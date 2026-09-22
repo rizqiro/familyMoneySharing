@@ -57,6 +57,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final invite = _invite;
 
     // Once the partner is in the household, this screen has done its job.
@@ -64,17 +65,17 @@ class _InvitePageState extends ConsumerState<InvitePage> {
       final household = next.valueOrNull;
       if (household != null && household.isPaired && mounted) {
         Navigator.of(context).maybePop();
-        showToast(context, 'You are connected.');
+        showToast(context, ref.read(textProvider)('invite.connected'));
       }
     });
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invite your partner'),
+        title: Text(t('invite.title')),
         actions: [
           if (invite != null)
             IconButton(
-              tooltip: 'New code',
+              tooltip: t('invite.new_code'),
               icon: const Icon(Icons.refresh),
               onPressed: _busy ? null : _mint,
             ),
@@ -85,8 +86,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
           padding: const EdgeInsets.all(Insets.page),
           children: [
             Text(
-              'Have them open Family Money, choose "Join my partner", and '
-              'point their camera at this.',
+              t('invite.blurb'),
               style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
             ),
             const SizedBox(height: Insets.xl),
@@ -137,7 +137,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
                       ),
                       const SizedBox(height: Insets.xl),
                       Text(
-                        'OR TYPE THIS CODE',
+                        t('invite.or_type'),
                         style:
                             text.labelSmall?.copyWith(color: colors.inkMuted),
                       ),
@@ -153,11 +153,11 @@ class _InvitePageState extends ConsumerState<InvitePage> {
                             ClipboardData(text: invite.code),
                           );
                           if (context.mounted) {
-                            showToast(context, 'Code copied');
+                            showToast(context, t('invite.copied'));
                           }
                         },
                         icon: const Icon(Icons.copy, size: 16),
-                        label: const Text('Copy code'),
+                        label: Text(t('invite.copy')),
                       ),
                     ],
                   ),
@@ -170,8 +170,7 @@ class _InvitePageState extends ConsumerState<InvitePage> {
                   const SizedBox(width: Insets.sm),
                   Expanded(
                     child: Text(
-                      'Single use, and it expires in 24 hours. Anyone with the '
-                      'code can join, so share it directly.',
+                      t('invite.expiry'),
                       style:
                           text.bodySmall?.copyWith(color: colors.inkSecondary),
                     ),
