@@ -3,6 +3,8 @@ import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format/money.dart';
+import '../../core/i18n/app_text.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -46,6 +48,9 @@ import 'widgets/spend_split.dart';
 ///
 /// `ConsumerWidget` is Riverpod's version of a stateless widget: same thing plus
 /// a `ref` for reading providers.
+///
+/// Every piece of text comes from `t('some.key')` rather than being written
+/// here, so the screen works in all five languages. See `core/i18n/app_text.dart`.
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
@@ -53,14 +58,19 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final household = ref.watch(householdProvider).valueOrNull;
     final summary = ref.watch(summaryProvider);
     final money = ref.watch(moneyProvider);
     final loading = ref.watch(summaryLoadingProvider);
+    final partner = ref.watch(partnerProvider);
 
     if (household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    final partnerName = partner?.displayName.trim().split(' ').first ??
+        t('common.partner');
 
     return Scaffold(
       body: SafeArea(
@@ -89,7 +99,7 @@ class DashboardPage extends ConsumerWidget {
               ],
 
               // ----------------------------------------------- 1. yours
-              const SectionHeader(title: 'Your budgets'),
+              SectionHeader(title: t('dashboard.your_budgets')),
               if (summary.hasNothingToSpend && !loading)
                 const _NothingToSpendCard()
               else ...[
@@ -99,7 +109,10 @@ class DashboardPage extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: Insets.sm),
                     child: i == 0
-                        ? _MyBudgetHero(view: summary.myMonthly[i], summary: summary)
+                        ? _MyBudgetHero(
+                            view: summary.myMonthly[i],
+                            summary: summary,
+                          )
                         : _BudgetRow(view: summary.myMonthly[i]),
                   ),
                 for (final view in summary.mySavings)
@@ -111,14 +124,14 @@ class DashboardPage extends ConsumerWidget {
               const SizedBox(height: Insets.xl),
 
               // -------------------------------------- 2. household total
-              const SectionHeader(title: 'Accumulated budget'),
+              SectionHeader(title: t('dashboard.accumulated')),
               _AccumulatedCard(summary: summary),
               const SizedBox(height: Insets.xl),
 
               // ---------------------------------------------- 3. theirs
               if (summary.theirBudgets.isNotEmpty) ...[
                 SectionHeader(
-                  title: '${_firstName(ref)}’s budgets',
+                  title: t('dashboard.their_budgets', {'name': partnerName}),
                 ),
                 for (final view in summary.theirBudgets)
                   Padding(
@@ -130,30 +143,36 @@ class DashboardPage extends ConsumerWidget {
 
               // ------------------------------------- 4. charts & ledger
               if (household.isPaired) ...[
-                const SectionHeader(title: 'Who spent what'),
+                SectionHeader(title: t('dashboard.who_spent')),
                 SoftCard(
                   child: SpendSplit(
                     household: household,
                     spendByMember: summary.spendByMember,
                     money: money,
+                    youLabel: t('common.you'),
+                    viewerUid: summary.viewerUid,
+                    emptyLabel: t('ledger.empty'),
                   ),
                 ),
                 const SizedBox(height: Insets.xl),
               ],
 
               if (summary.categoriesBySpend.any((c) => c.spent > 0)) ...[
-                const SectionHeader(title: 'Where it went'),
+                SectionHeader(title: t('dashboard.where_went')),
                 SoftCard(
                   child: CategoryBars(
                     categories: summary.categoriesBySpend,
                     money: money,
+                    otherLabel: t('dashboard.other', {
+                      'count': '${(summary.categoriesBySpend.where((c) => c.spent > 0).length - 6).clamp(0, 999)}',
+                    }),
                   ),
                 ),
                 const SizedBox(height: Insets.xl),
               ],
 
               if (summary.expenses.isNotEmpty) ...[
-                const SectionHeader(title: 'Latest'),
+                SectionHeader(title: t('dashboard.latest')),
                 SoftCard(
                   padding: EdgeInsets.zero,
                   child: Column(
@@ -179,9 +198,11 @@ class DashboardPage extends ConsumerWidget {
                 const SizedBox(height: Insets.md),
                 Center(
                   child: Text(
-                    '${summary.expenses.length} '
-                    '${summary.expenses.length == 1 ? 'entry' : 'entries'} '
-                    'this month',
+                    t.plural(
+                      summary.expenses.length,
+                      'dashboard.entries_one',
+                      'dashboard.entries_many',
+                    ),
                     style: text.bodySmall?.copyWith(color: colors.inkMuted),
                   ),
                 ),
@@ -191,13 +212,6 @@ class DashboardPage extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  /// The partner's first name, or a neutral fallback while they load.
-  static String _firstName(WidgetRef ref) {
-    final partner = ref.watch(partnerProvider);
-    final name = partner?.displayName.trim() ?? '';
-    return name.isEmpty ? 'Partner' : name.split(' ').first;
   }
 }
 
@@ -211,6 +225,7 @@ class _Header extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final profile = ref.watch(profileProvider).valueOrNull;
 
     return Row(
@@ -230,7 +245,7 @@ class _Header extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Shared overview',
+                t('dashboard.subtitle'),
                 style: text.bodySmall?.copyWith(color: colors.inkMuted),
               ),
             ],
@@ -250,13 +265,14 @@ class _Header extends ConsumerWidget {
 }
 
 /// Shown until the second member joins.
-class _PairBanner extends StatelessWidget {
+class _PairBanner extends ConsumerWidget {
   const _PairBanner();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
 
     return SoftCard(
       onTap: () => Navigator.of(context).push(
@@ -271,10 +287,10 @@ class _PairBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Connect your partner', style: text.titleMedium),
+                Text(t('dashboard.connect'), style: text.titleMedium),
                 const SizedBox(height: 2),
                 Text(
-                  'Show them a QR code so you both see the same numbers.',
+                  t('dashboard.connect_blurb'),
                   style: text.bodySmall?.copyWith(color: colors.inkSecondary),
                 ),
               ],
@@ -298,6 +314,7 @@ class _MyBudgetHero extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final over = view.isOver;
 
@@ -326,7 +343,7 @@ class _MyBudgetHero extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'You control this',
+                      t('dashboard.you_control'),
                       style:
                           text.bodySmall?.copyWith(color: colors.inkSecondary),
                     ),
@@ -335,7 +352,8 @@ class _MyBudgetHero extends ConsumerWidget {
               ),
               if (view.pendingCount > 0)
                 Tag(
-                  label: '${view.pendingCount} to confirm',
+                  label: t('dashboard.to_confirm',
+                      {'count': '${view.pendingCount}'}),
                   icon: Icons.schedule,
                   color: colors.warning,
                   filled: true,
@@ -345,7 +363,9 @@ class _MyBudgetHero extends ConsumerWidget {
           const SizedBox(height: Insets.lg),
 
           Text(
-            over ? 'OVER BUDGET BY' : 'LEFT TO SPEND',
+            over
+                ? t('dashboard.over_budget_by')
+                : t('dashboard.left_to_spend'),
             style: text.labelSmall?.copyWith(color: colors.inkMuted),
           ),
           const SizedBox(height: 6),
@@ -371,15 +391,22 @@ class _MyBudgetHero extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${money.format(view.spent)} of ${money.format(view.planned)}',
+                  t('dashboard.spent_of', {
+                    'spent': money.format(view.spent),
+                    'planned': money.format(view.planned),
+                  }),
                   style: text.bodySmall?.copyWith(color: colors.inkSecondary),
                 ),
               ),
               if (summary.period.isCurrent && view.planned > 0)
                 Text(
                   summary.isAheadOfPace
-                      ? 'Ahead of pace'
-                      : '${money.compact(summary.dailyAllowanceFor(view.remaining))}/day left',
+                      ? t('dashboard.ahead_of_pace')
+                      : t('dashboard.per_day_left', {
+                          'amount': money.compact(
+                            summary.dailyAllowanceFor(view.remaining),
+                          ),
+                        }),
                   style: text.bodySmall?.copyWith(
                     color: summary.isAheadOfPace
                         ? colors.warning
@@ -411,6 +438,7 @@ class _TransferNote extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final net = view.transferredIn - view.transferredOut;
     final gained = net > 0;
@@ -425,8 +453,10 @@ class _TransferNote extends ConsumerWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            '${money.format(net.abs())} ${gained ? 'moved in' : 'moved out'} '
-            '· set at ${money.format(view.baseAmount)}',
+            t(gained ? 'dashboard.moved_in' : 'dashboard.moved_out', {
+              'amount': money.format(net.abs()),
+              'base': money.format(view.baseAmount),
+            }),
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -447,6 +477,7 @@ class _NothingToSpendCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final partner = ref.watch(partnerProvider);
     final partnerName = partner?.displayName.split(' ').first;
 
@@ -472,17 +503,15 @@ class _NothingToSpendCard extends ConsumerWidget {
           ),
           const SizedBox(height: Insets.lg),
           Text(
-            'You don’t control a budget yet',
+            t('dashboard.no_budget_title'),
             textAlign: TextAlign.center,
             style: text.titleMedium,
           ),
           const SizedBox(height: Insets.xs),
           Text(
             partnerName == null
-                ? 'Spending comes out of a budget you control. Create one to '
-                    'start logging.'
-                : 'Spending comes out of a budget you control. $partnerName’s '
-                    'budgets are visible to you, but not yours to spend.',
+                ? t('dashboard.no_budget_blurb_solo')
+                : t('dashboard.no_budget_blurb', {'name': partnerName}),
             textAlign: TextAlign.center,
             style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
           ),
@@ -490,13 +519,15 @@ class _NothingToSpendCard extends ConsumerWidget {
           if (partnerName != null) ...[
             FilledButton(
               onPressed: () => showRequestMoneySheet(context),
-              child: Text('Request money from $partnerName'),
+              child: Text(
+                t('dashboard.request_from', {'name': partnerName}),
+              ),
             ),
             const SizedBox(height: Insets.md),
           ],
           OutlinedButton(
             onPressed: () => showBudgetEditor(context),
-            child: const Text('Create my own budget'),
+            child: Text(t('dashboard.create_my_budget')),
           ),
         ],
       ),
@@ -515,6 +546,7 @@ class _AccumulatedCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final partner = ref.watch(partnerProvider);
     final over = summary.isOver;
@@ -538,7 +570,7 @@ class _AccumulatedCard extends ConsumerWidget {
               ),
               const SizedBox(width: Insets.sm),
               Text(
-                over ? 'over' : 'left',
+                over ? t('common.over') : t('common.left'),
                 style: text.bodySmall?.copyWith(color: colors.inkSecondary),
               ),
             ],
@@ -552,9 +584,15 @@ class _AccumulatedCard extends ConsumerWidget {
           ),
           const SizedBox(height: Insets.md),
           Text(
-            '${money.format(summary.spent)} spent of '
-            '${money.format(summary.planned)}'
-            '${partner == null ? '' : ' across both of you'}',
+            t(
+              partner == null
+                  ? 'dashboard.spent_of_solo'
+                  : 'dashboard.spent_of_both',
+              {
+                'spent': money.format(summary.spent),
+                'planned': money.format(summary.planned),
+              },
+            ),
             style: text.bodySmall?.copyWith(color: colors.inkSecondary),
           ),
 
@@ -566,13 +604,15 @@ class _AccumulatedCard extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Stat(
-                    label: 'Yours',
+                    label: t('dashboard.yours'),
                     value: money.format(summary.myRemaining),
                   ),
                 ),
                 Expanded(
                   child: Stat(
-                    label: '${partner.displayName.split(' ').first}’s',
+                    label: t('dashboard.theirs', {
+                      'name': partner.displayName.split(' ').first,
+                    }),
                     value: money.format(summary.theirRemaining),
                   ),
                 ),
@@ -589,7 +629,7 @@ class _AccumulatedCard extends ConsumerWidget {
                 Icon(Icons.savings_outlined, size: 16, color: colors.positive),
                 const SizedBox(width: Insets.sm),
                 Text(
-                  'Put aside this month',
+                  t('dashboard.put_aside'),
                   style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
                 ),
                 const Spacer(),
@@ -622,6 +662,7 @@ class _TheirBudgetCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
 
     return SoftCard(
@@ -633,31 +674,19 @@ class _TheirBudgetCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      view.budget.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.titleMedium,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      view.budget.isSaving
-                          ? '${money.format(view.spent)} of '
-                              '${money.format(view.planned)} target'
-                          : '${money.format(view.remaining.abs())} '
-                              '${view.isOver ? 'over' : 'left'} of '
-                              '${money.format(view.planned)}',
-                      style:
-                          text.bodySmall?.copyWith(color: colors.inkSecondary),
-                    ),
-                  ],
-                ),
+              Text(
+                view.budget.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.titleMedium,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _summaryLine(t, money, view),
+                style: text.bodySmall?.copyWith(color: colors.inkSecondary),
               ),
             ],
           ),
@@ -674,7 +703,7 @@ class _TheirBudgetCard extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'You can see it, not spend from it.',
+                    t('dashboard.see_not_spend'),
                     style:
                         text.bodySmall?.copyWith(color: colors.inkSecondary),
                   ),
@@ -693,7 +722,7 @@ class _TheirBudgetCard extends ConsumerWidget {
                     ),
                     textStyle: text.labelMedium,
                   ),
-                  child: const Text('Request money'),
+                  child: Text(t('dashboard.request_money')),
                 ),
               ],
             ),
@@ -715,6 +744,7 @@ class _BudgetRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
 
     return SoftCard(
@@ -738,7 +768,8 @@ class _BudgetRow extends ConsumerWidget {
               ),
               if (view.pendingCount > 0) ...[
                 Tag(
-                  label: '${view.pendingCount} to confirm',
+                  label: t('dashboard.to_confirm',
+                      {'count': '${view.pendingCount}'}),
                   icon: Icons.schedule,
                   color: colors.warning,
                   filled: true,
@@ -763,14 +794,30 @@ class _BudgetRow extends ConsumerWidget {
           const SizedBox(height: Insets.sm),
           Text(
             saving
-                ? 'Target ${money.format(view.planned)}'
-                : '${money.format(view.remaining.abs())} '
-                    '${view.isOver ? 'over' : 'left'} of '
-                    '${money.format(view.planned)}',
+                ? t('dashboard.target_of',
+                    {'amount': money.format(view.planned)})
+                : _summaryLine(t, money, view),
             style: text.bodySmall?.copyWith(color: colors.inkSecondary),
           ),
         ],
       ),
     );
   }
+}
+
+/// "Rp 2.650.000 left of Rp 6.000.000", or the saving-pot equivalent.
+///
+/// A free function rather than a method because three different cards need the
+/// same line, and none of them owns it.
+String _summaryLine(AppText t, Money money, BudgetView view) {
+  if (view.budget.isSaving) {
+    return t('dashboard.saving_of', {
+      'spent': money.format(view.spent),
+      'planned': money.format(view.planned),
+    });
+  }
+  return t(view.isOver ? 'dashboard.over_of' : 'dashboard.left_of', {
+    'amount': money.format(view.remaining.abs()),
+    'planned': money.format(view.planned),
+  });
 }

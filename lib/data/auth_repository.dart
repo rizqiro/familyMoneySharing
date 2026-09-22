@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/i18n/app_language.dart';
 import '../models/app_user.dart';
 import 'firestore_refs.dart';
 
@@ -30,10 +31,16 @@ class AuthRepository {
         return AppUser.fromDoc(doc);
       });
 
+  /// Creates the account and its profile document.
+  ///
+  /// [language] is whatever the app guessed from the phone at startup, so a
+  /// brand-new account already reads in the right language before the user has
+  /// been anywhere near Settings.
   Future<AppUser> signUp({
     required String name,
     required String email,
     required String password,
+    required AppLanguage language,
   }) async {
     final credential = await _guard(
       () => _auth.createUserWithEmailAndPassword(
@@ -51,6 +58,7 @@ class AuthRepository {
       displayName: displayName,
       email: user.email ?? email.trim(),
       householdId: null,
+      language: language,
       createdAt: null,
     );
     await _refs.user(user.uid).set(profile.toCreateJson());
@@ -60,6 +68,7 @@ class AuthRepository {
   Future<void> signIn({
     required String email,
     required String password,
+    required AppLanguage language,
   }) async {
     final credential = await _guard(
       () => _auth.signInWithEmailAndPassword(
@@ -79,6 +88,7 @@ class AuthRepository {
               displayName: user.displayName ?? '',
               email: user.email ?? email.trim(),
               householdId: null,
+              language: language,
               createdAt: null,
             ).toCreateJson(),
           );
@@ -87,6 +97,13 @@ class AuthRepository {
 
   Future<void> sendPasswordReset(String email) =>
       _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
+
+  /// Saves the interface language on the user's own profile.
+  ///
+  /// Writing it to Firestore rather than to the phone means the choice follows
+  /// the person to a new device, and each partner keeps their own.
+  Future<void> setLanguage(String uid, AppLanguage language) =>
+      _refs.user(uid).update({'language': language.code});
 
   Future<void> signOut() => _auth.signOut();
 

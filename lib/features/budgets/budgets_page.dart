@@ -13,21 +13,28 @@ import '../../state/providers.dart';
 import 'budget_detail_page.dart';
 import 'budget_editor.dart';
 
+/// Every budget for the selected month, both members'.
+///
+/// The Overview tab leads with what you control; this tab is the full list,
+/// each card labelled with whose it is. An empty month offers to copy last
+/// month's plan across - without that, every month starts from nothing, which
+/// is the fastest way to make someone stop using a budgeting app.
 class BudgetsPage extends ConsumerWidget {
   const BudgetsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.watch(textProvider);
     final summary = ref.watch(summaryProvider);
     final loading = ref.watch(summaryLoadingProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Budgets'),
+        title: Text(t('budgets.title')),
         actions: [
           const Center(child: PeriodSwitcher()),
           IconButton(
-            tooltip: 'New budget',
+            tooltip: t('budgets.new_budget'),
             icon: const Icon(Icons.add),
             onPressed: () => showBudgetEditor(context),
           ),
@@ -48,7 +55,7 @@ class BudgetsPage extends ConsumerWidget {
               _EmptyMonth(summary: summary)
             else ...[
               if (summary.monthly.isNotEmpty) ...[
-                const SectionHeader(title: 'This month'),
+                SectionHeader(title: t('budgets.this_month')),
                 for (final view in summary.monthly)
                   Padding(
                     padding: const EdgeInsets.only(bottom: Insets.sm),
@@ -57,7 +64,7 @@ class BudgetsPage extends ConsumerWidget {
                 const SizedBox(height: Insets.xl),
               ],
               if (summary.savings.isNotEmpty) ...[
-                const SectionHeader(title: 'Saving pots'),
+                SectionHeader(title: t('budgets.saving_pots')),
                 for (final view in summary.savings)
                   Padding(
                     padding: const EdgeInsets.only(bottom: Insets.sm),
@@ -100,11 +107,14 @@ class _EmptyMonthState extends ConsumerState<_EmptyMonth> {
             actorUid: uid,
           );
       if (!mounted) return;
+      final t = ref.read(textProvider);
+      final locale = ref.read(dateLocaleProvider);
       showToast(
         context,
         copied == 0
-            ? 'Nothing of yours to copy from ${period.previous().label()}.'
-            : 'Copied $copied ${copied == 1 ? 'budget' : 'budgets'}.',
+            ? t('budgets.nothing_to_copy',
+                {'month': period.previous().label(locale)})
+            : t.plural(copied, 'budgets.copied_one', 'budgets.copied_many'),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -113,23 +123,24 @@ class _EmptyMonthState extends ConsumerState<_EmptyMonth> {
 
   @override
   Widget build(BuildContext context) {
+    final t = ref.watch(textProvider);
+    final locale = ref.watch(dateLocaleProvider);
     final period = ref.watch(selectedPeriodProvider);
 
     return Column(
       children: [
         EmptyState(
           icon: Icons.account_balance_wallet_outlined,
-          title: 'No budgets for ${period.label()}',
-          message:
-              'Decide what you plan to spend, split it into categories, and '
-              'both of you can start logging against it.',
-          actionLabel: 'Create a budget',
+          title: t('budgets.none_title', {'month': period.label(locale)}),
+          message: t('budgets.none_blurb'),
+          actionLabel: t('budgets.create'),
           onAction: () => showBudgetEditor(context),
         ),
         const SizedBox(height: Insets.sm),
         TextButton(
           onPressed: _busy ? null : _rollover,
-          child: Text('Copy from ${period.previous().label()}'),
+          child: Text(t('budgets.copy_from',
+              {'month': period.previous().label(locale)},),),
         ),
       ],
     );
@@ -146,14 +157,17 @@ class _BudgetCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final household = ref.watch(householdProvider).valueOrNull;
     final uid = ref.watch(currentUidProvider);
 
     final controller = view.budget.controllerId == uid
-        ? 'You control this'
-        : '${household?.displayNameOf(view.budget.controllerId) ?? 'Partner'} '
-            'controls this';
+        ? t('budgets.you_control')
+        : t('budgets.partner_controls', {
+            'name': household?.displayNameOf(view.budget.controllerId) ??
+                t('common.partner'),
+          });
 
     return SoftCard(
       onTap: () => Navigator.of(context).push(
@@ -196,7 +210,7 @@ class _BudgetCard extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    'of ${money.format(view.planned)}',
+                    '${t('common.of')} ${money.format(view.planned)}',
                     style: text.bodySmall?.copyWith(color: colors.inkMuted),
                   ),
                 ],
@@ -215,25 +229,29 @@ class _BudgetCard extends ConsumerWidget {
             runSpacing: Insets.sm,
             children: [
               Tag(
-                label: '${view.categories.length} '
-                    '${view.categories.length == 1 ? 'category' : 'categories'}',
+                label: t.plural(view.categories.length,
+                    'budgets.categories_one', 'budgets.categories_many',),
               ),
               if (view.pendingCount > 0)
                 Tag(
-                  label: '${view.pendingCount} awaiting confirmation',
+                  label: t('budgets.awaiting',
+                      {'count': '${view.pendingCount}'},),
                   icon: Icons.schedule,
                   color: colors.warning,
                   filled: true,
                 ),
               if (view.isOverAllocated)
                 Tag(
-                  label: 'Allocated over plan',
+                  label: t('budgets.over_allocated'),
                   icon: Icons.warning_amber_rounded,
                   color: colors.negative,
                   filled: true,
                 ),
               if (!view.isOverAllocated && view.unallocated > 0)
-                Tag(label: '${money.compact(view.unallocated)} unallocated'),
+                Tag(
+                  label: t('budgets.unallocated',
+                      {'amount': money.compact(view.unallocated)},),
+                ),
             ],
           ),
         ],

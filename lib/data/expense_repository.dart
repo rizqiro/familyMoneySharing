@@ -3,6 +3,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/expense.dart';
 import 'firestore_refs.dart';
 
+/// The shared ledger.
+///
+/// Both members read every entry - that is the point of the app. Writing is
+/// narrower: an expense may only be filed against a budget you control, which
+/// the security rules enforce.
+///
+/// `period` is stored on each expense rather than derived from its date, so a
+/// month's ledger is one indexed query instead of a range scan the client has
+/// to re-bucket. It also lets a household start its month on payday rather than
+/// the 1st without any of this changing.
 class ExpenseRepository {
   ExpenseRepository(this.db, this._refs);
 

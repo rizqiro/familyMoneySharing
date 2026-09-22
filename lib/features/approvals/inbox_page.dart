@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/app_text.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -25,6 +26,7 @@ class InboxPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    final t = ref.watch(textProvider);
     final household = ref.watch(householdProvider).valueOrNull;
 
     // `?? const []` turns "still loading" into "nothing yet", so the page can
@@ -40,18 +42,16 @@ class InboxPage extends ConsumerWidget {
         sentMoney.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Inbox')),
+      appBar: AppBar(title: Text(t('inbox.title'))),
       body: SafeArea(
         top: false,
         child: nothingWaiting
             ? EmptyState(
                 icon: Icons.check_circle_outline,
-                title: 'Nothing to confirm',
+                title: t('inbox.empty'),
                 message: household != null && !household.isPaired
-                    ? 'Once your partner joins, budget allocations and money '
-                        'requests will come here.'
-                    : 'Allocations to agree to, and requests to move money, '
-                        'both land here.',
+                    ? t('inbox.empty_unpaired')
+                    : t('inbox.empty_blurb'),
               )
             : ListView(
                 padding: const EdgeInsets.fromLTRB(
@@ -62,7 +62,7 @@ class InboxPage extends ConsumerWidget {
                 ),
                 children: [
                   if (moneyIn.isNotEmpty || approvals.isNotEmpty) ...[
-                    const SectionHeader(title: 'Waiting on you'),
+                    SectionHeader(title: t('inbox.waiting_on_you')),
                     // Money first: it is blocking someone from spending, which
                     // is more urgent than agreeing to a plan.
                     for (final request in moneyIn)
@@ -78,7 +78,7 @@ class InboxPage extends ConsumerWidget {
                     const SizedBox(height: Insets.xl),
                   ],
                   if (sentMoney.isNotEmpty || sentApprovals.isNotEmpty) ...[
-                    const SectionHeader(title: 'Waiting on your partner'),
+                    SectionHeader(title: t('inbox.waiting_on_partner')),
                     for (final request in sentMoney)
                       Padding(
                         padding: const EdgeInsets.only(bottom: Insets.sm),
@@ -92,9 +92,7 @@ class InboxPage extends ConsumerWidget {
                   ],
                   const SizedBox(height: Insets.lg),
                   Text(
-                    'Pending allocations still count toward the plan, so the '
-                    'numbers reflect what you intend while you sort it out. '
-                    'Money only moves once a request is approved.',
+                    t('inbox.note'),
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -129,7 +127,7 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
 
     var note = '';
     if (!approved) {
-      final reason = await _askReason(context);
+      final reason = await _askReason(context, ref.read(textProvider));
       // null means the dialog was dismissed rather than confirmed, so nothing
       // should happen at all.
       if (reason == null) return;
@@ -145,7 +143,11 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
             note: note,
           );
       if (mounted) {
-        showToast(context, approved ? 'Money moved' : 'Declined');
+        final t = ref.read(textProvider);
+        showToast(
+          context,
+          t(approved ? 'inbox.money_moved' : 'inbox.declined'),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -156,6 +158,7 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final summary = ref.watch(summaryProvider);
     final request = widget.request;
@@ -184,7 +187,9 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
               const SizedBox(width: Insets.md),
               Expanded(
                 child: Text(
-                  request.reason.isEmpty ? 'Money request' : request.reason,
+                  request.reason.isEmpty
+                      ? t('inbox.money_request')
+                      : request.reason,
                   style: text.titleMedium,
                 ),
               ),
@@ -192,8 +197,11 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
           ),
           const SizedBox(height: Insets.md),
           Text(
-            '${request.requestedByName.split(' ').first} is asking for money '
-            'out of ${request.fromBudgetName}, into ${request.toBudgetName}.',
+            t('inbox.asking_for', {
+              'name': request.requestedByName.split(' ').first,
+              'from': request.fromBudgetName,
+              'to': request.toBudgetName,
+            }),
             style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
           ),
           const SizedBox(height: Insets.lg),
@@ -215,8 +223,9 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
                 if (afterwards != null)
                   Tag(
                     label: tooMuch
-                        ? 'More than you have'
-                        : 'Leaves ${money.compact(afterwards)}',
+                        ? t('inbox.more_than_you_have')
+                        : t('inbox.leaves',
+                            {'amount': money.compact(afterwards)},),
                     color: tooMuch ? colors.negative : colors.inkSecondary,
                     filled: tooMuch,
                   ),
@@ -227,7 +236,7 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
           if (tooMuch) ...[
             const SizedBox(height: Insets.md),
             Text(
-              'Approving would put ${request.fromBudgetName} over budget.',
+              t('inbox.would_go_over', {'budget': request.fromBudgetName}),
               style: text.bodySmall?.copyWith(color: colors.negative),
             ),
           ],
@@ -238,7 +247,7 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _busy ? null : () => _decide(false),
-                  child: const Text('Decline'),
+                  child: Text(t('common.decline')),
                 ),
               ),
               const SizedBox(width: Insets.md),
@@ -251,7 +260,7 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Send money'),
+                      : Text(t('inbox.send_money')),
                 ),
               ),
             ],
@@ -281,7 +290,7 @@ class _AllocationCardState extends ConsumerState<_AllocationCard> {
 
     var note = '';
     if (!approved) {
-      final reason = await _askReason(context);
+      final reason = await _askReason(context, ref.read(textProvider));
       if (reason == null) return;
       note = reason;
     }
@@ -295,7 +304,11 @@ class _AllocationCardState extends ConsumerState<_AllocationCard> {
             note: note,
           );
       if (mounted) {
-        showToast(context, approved ? 'Confirmed' : 'Declined');
+        final t = ref.read(textProvider);
+        showToast(
+          context,
+          t(approved ? 'inbox.confirmed' : 'inbox.declined'),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -306,6 +319,7 @@ class _AllocationCardState extends ConsumerState<_AllocationCard> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final household = ref.watch(householdProvider).valueOrNull;
     final approval = widget.approval;
@@ -356,7 +370,8 @@ class _AllocationCardState extends ConsumerState<_AllocationCard> {
                 ),
                 if (delta != null && delta != 0)
                   Tag(
-                    label: '${money.signed(delta)} vs before',
+                    label: t('inbox.vs_before',
+                        {'amount': money.signed(delta)},),
                     color: delta > 0 ? colors.warning : colors.positive,
                     filled: true,
                   ),
@@ -370,7 +385,7 @@ class _AllocationCardState extends ConsumerState<_AllocationCard> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _busy ? null : () => _decide(false),
-                  child: const Text('Decline'),
+                  child: Text(t('common.decline')),
                 ),
               ),
               const SizedBox(width: Insets.md),
@@ -383,7 +398,7 @@ class _AllocationCardState extends ConsumerState<_AllocationCard> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Confirm'),
+                      : Text(t('common.confirm')),
                 ),
               ),
             ],
@@ -405,12 +420,13 @@ class _SentMoneyCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final household = ref.watch(householdProvider).valueOrNull;
 
     final partnerName =
         household?.displayNameOf(request.requestedFor).split(' ').first ??
-            'your partner';
+            t('common.partner');
 
     return SoftCard(
       color: colors.surfaceSunken,
@@ -423,13 +439,18 @@ class _SentMoneyCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  request.reason.isEmpty ? 'Money request' : request.reason,
+                  request.reason.isEmpty
+                      ? t('inbox.money_request')
+                      : request.reason,
                   style: text.titleMedium,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${money.format(request.amount)} from '
-                  '${request.fromBudgetName} · waiting on $partnerName',
+                  t('inbox.waiting_from', {
+                    'amount': money.format(request.amount),
+                    'budget': request.fromBudgetName,
+                    'name': partnerName,
+                  }),
                   style: text.bodySmall?.copyWith(color: colors.inkSecondary),
                 ),
               ],
@@ -443,7 +464,7 @@ class _SentMoneyCard extends ConsumerWidget {
                   .read(moneyRequestRepositoryProvider)
                   .withdraw(householdId, request.id);
             },
-            child: const Text('Withdraw'),
+            child: Text(t('inbox.withdraw')),
           ),
         ],
       ),
@@ -465,12 +486,13 @@ class _SentAllocationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
     final household = ref.watch(householdProvider).valueOrNull;
 
     final partnerName =
         household?.displayNameOf(approval.requestedFor).split(' ').first ??
-            'your partner';
+            t('common.partner');
 
     return SoftCard(
       color: colors.surfaceSunken,
@@ -485,13 +507,15 @@ class _SentAllocationCard extends ConsumerWidget {
                 Text(approval.title, style: text.titleMedium),
                 const SizedBox(height: 2),
                 Text(
-                  '${money.format(approval.amount)} · waiting on '
-                  '$partnerName',
+                  t('inbox.waiting_amount', {
+                    'amount': money.format(approval.amount),
+                    'name': partnerName,
+                  }),
                   style: text.bodySmall?.copyWith(color: colors.inkSecondary),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Editing the category replaces this request.',
+                  t('inbox.editing_replaces'),
                   style: text.bodySmall?.copyWith(color: colors.inkMuted),
                 ),
               ],
@@ -508,26 +532,26 @@ class _SentAllocationCard extends ConsumerWidget {
 /// Returns the typed reason, or null if the dialog was dismissed. That
 /// distinction matters: empty string means "declined without saying why",
 /// null means "changed my mind about declining".
-Future<String?> _askReason(BuildContext context) {
+Future<String?> _askReason(BuildContext context, AppText t) {
   final controller = TextEditingController();
   return showDialog<String>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Decline'),
+      title: Text(t('inbox.decline_title')),
       content: TextField(
         controller: controller,
         autofocus: true,
         textCapitalization: TextCapitalization.sentences,
-        decoration: const InputDecoration(hintText: 'Say why (optional)'),
+        decoration: InputDecoration(hintText: t('inbox.decline_hint')),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(t('common.cancel')),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(controller.text),
-          child: const Text('Decline'),
+          child: Text(t('common.decline')),
         ),
       ],
     ),

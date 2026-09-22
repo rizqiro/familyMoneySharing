@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/format/money.dart';
 import '../core/format/period.dart';
+import '../core/i18n/app_language.dart';
+import '../core/i18n/app_text.dart';
 import '../data/approval_repository.dart';
 import '../data/auth_repository.dart';
 import '../data/budget_repository.dart';
@@ -167,6 +169,45 @@ final partnerProvider = Provider<HouseholdMember?>((ref) {
   if (household == null || uid == null) return null;
   return household.partnerOf(uid);
 });
+
+// --------------------------------------------------------------- Language
+
+/// What the phone itself is set to, used before anyone has chosen.
+///
+/// Set once at startup in `main.dart` - reading it from a provider rather than
+/// a global keeps it swappable in tests.
+final deviceLanguageProvider = Provider<AppLanguage>(
+  (ref) => AppLanguage.indonesian,
+);
+
+/// The language the interface is drawn in.
+///
+/// It comes off the signed-in user's own profile, so the two partners can read
+/// the app in different languages. Before sign-in, or while the profile is
+/// still loading, the device's own setting stands in.
+///
+/// Because it is a provider, changing it in Settings writes to Firestore, the
+/// profile stream emits, this recomputes, and every screen watching
+/// [textProvider] rebuilds in the new language. No restart, no manual refresh.
+final languageProvider = Provider<AppLanguage>((ref) {
+  final profile = ref.watch(profileProvider).valueOrNull;
+  return profile?.language ?? ref.watch(deviceLanguageProvider);
+});
+
+/// The text lookup. `final t = ref.watch(textProvider);` then `t('some.key')`.
+final textProvider = Provider<AppText>(
+  (ref) => AppText(ref.watch(languageProvider)),
+);
+
+/// Which locale `intl` should format dates with.
+///
+/// Passed explicitly to every `DateFormat` call rather than set as a global,
+/// so the date language can never drift out of step with the interface
+/// language. The three regional languages borrow Indonesian here, because
+/// `intl` ships no month names for them.
+final dateLocaleProvider = Provider<String>(
+  (ref) => ref.watch(languageProvider).intlLocale,
+);
 
 /// The number formatter for the household's currency. Because it is derived
 /// from the household document, changing the currency in Settings reformats

@@ -107,22 +107,23 @@ class _JoinPageState extends ConsumerState<JoinPage> {
   }
 
   Future<bool?> _confirm(Invite invite) {
+    final t = ref.read(textProvider);
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Join this household?'),
-        content: Text(
-          '${invite.createdByName} invited you to "${invite.householdName}". '
-          'You will both see every budget and every expense in it.',
-        ),
+        title: Text(t('join.confirm_title')),
+        content: Text(t('join.confirm_body', {
+          'name': invite.createdByName,
+          'household': invite.householdName,
+        })),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('common.cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Join'),
+            child: Text(t('join.cta_short')),
           ),
         ],
       ),
@@ -133,9 +134,10 @@ class _JoinPageState extends ConsumerState<JoinPage> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Join your partner')),
+      appBar: AppBar(title: Text(t('join.title'))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(Insets.page),
@@ -154,7 +156,9 @@ class _JoinPageState extends ConsumerState<JoinPage> {
                               onDetect: _onDetect,
                               errorBuilder: (context, error, _) => _ScanError(
                                 message: error.errorDetails?.message ??
-                                    'The camera is unavailable.',
+                                    t('join.camera_unavailable'),
+                                template:
+                                    t('join.still_type', {'message': '@'}),
                               ),
                             ),
                             const _ScannerFrame(),
@@ -168,7 +172,7 @@ class _JoinPageState extends ConsumerState<JoinPage> {
                   padding: const EdgeInsets.only(top: Insets.sm),
                   child: TextButton(
                     onPressed: _stopScanning,
-                    child: const Text('Stop camera'),
+                    child: Text(t('join.stop_camera')),
                   ),
                 ),
               const SizedBox(height: Insets.xl),
@@ -179,7 +183,7 @@ class _JoinPageState extends ConsumerState<JoinPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: Insets.md),
                     child: Text(
-                      'OR',
+                      t('join.or'),
                       style: text.labelSmall?.copyWith(color: colors.inkMuted),
                     ),
                   ),
@@ -189,10 +193,10 @@ class _JoinPageState extends ConsumerState<JoinPage> {
               const SizedBox(height: Insets.xl),
             ],
 
-            Text('Enter the invite code', style: text.titleMedium),
+            Text(t('join.enter_code'), style: text.titleMedium),
             const SizedBox(height: Insets.sm),
             Text(
-              'Eight characters, from the screen on your partner’s phone.',
+              t('join.enter_code_blurb'),
               style: text.bodySmall?.copyWith(color: colors.inkSecondary),
             ),
             const SizedBox(height: Insets.lg),
@@ -224,7 +228,7 @@ class _JoinPageState extends ConsumerState<JoinPage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Join household'),
+                  : Text(t('join.cta')),
             ),
           ],
         ),
@@ -233,13 +237,13 @@ class _JoinPageState extends ConsumerState<JoinPage> {
   }
 }
 
-class _ScannerIdle extends StatelessWidget {
+class _ScannerIdle extends ConsumerWidget {
   const _ScannerIdle({required this.onStart});
 
   final VoidCallback onStart;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     return InkWell(
       onTap: onStart,
@@ -251,7 +255,7 @@ class _ScannerIdle extends StatelessWidget {
             Icon(Icons.qr_code_scanner, size: 34, color: colors.inkMuted),
             const SizedBox(height: Insets.md),
             Text(
-              'Tap to scan their code',
+              ref.watch(textProvider)('join.tap_to_scan'),
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -265,9 +269,13 @@ class _ScannerIdle extends StatelessWidget {
 }
 
 class _ScanError extends StatelessWidget {
-  const _ScanError({required this.message});
+  const _ScanError({required this.message, required this.template});
 
   final String message;
+
+  /// The surrounding sentence, with `@` marking where [message] goes. Passed
+  /// in already translated because this widget cannot reach providers.
+  final String template;
 
   @override
   Widget build(BuildContext context) {
@@ -276,7 +284,7 @@ class _ScanError extends StatelessWidget {
       padding: const EdgeInsets.all(Insets.lg),
       alignment: Alignment.center,
       child: Text(
-        '$message\n\nYou can still type the code below.',
+        template.replaceAll('@', message),
         textAlign: TextAlign.center,
         style: Theme.of(context)
             .textTheme

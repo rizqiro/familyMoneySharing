@@ -71,13 +71,14 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
 
     final name = _name.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Give the budget a name.');
+      setState(() => _error = ref.read(textProvider)('budget_editor.err_name'));
       return;
     }
 
     final amount = Money.parseInput(_amount.text, household.currencyCode);
     if (amount == null || amount <= 0) {
-      setState(() => _error = 'Enter an amount greater than zero.');
+      setState(
+          () => _error = ref.read(textProvider)('budget_editor.err_amount'),);
       return;
     }
 
@@ -132,6 +133,8 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
+    final locale = ref.watch(dateLocaleProvider);
     final money = ref.watch(moneyProvider);
     final household = ref.watch(householdProvider).valueOrNull;
     final uid = ref.watch(currentUidProvider);
@@ -151,32 +154,35 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(_isEdit ? 'Edit budget' : 'New budget', style: text.titleLarge),
+            Text(
+              _isEdit ? t('budget_editor.edit') : t('budget_editor.new'),
+              style: text.titleLarge,
+            ),
             const SizedBox(height: Insets.lg),
 
             TextField(
               controller: _name,
               autofocus: !_isEdit,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Name, e.g. Living costs',
+              decoration: InputDecoration(
+                hintText: t('budget_editor.name_hint'),
               ),
             ),
             const SizedBox(height: Insets.lg),
 
-            Text('TYPE', style: text.labelSmall),
+            Text(t('budget_editor.type'), style: text.labelSmall),
             const SizedBox(height: Insets.sm),
             SegmentedButton<BudgetKind>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: BudgetKind.monthly,
-                  label: Text('Monthly'),
-                  icon: Icon(Icons.calendar_month_outlined, size: 16),
+                  label: Text(t('budget_editor.monthly')),
+                  icon: const Icon(Icons.calendar_month_outlined, size: 16),
                 ),
                 ButtonSegment(
                   value: BudgetKind.saving,
-                  label: Text('Saving'),
-                  icon: Icon(Icons.savings_outlined, size: 16),
+                  label: Text(t('budget_editor.saving')),
+                  icon: const Icon(Icons.savings_outlined, size: 16),
                 ),
               ],
               selected: {_kind},
@@ -186,14 +192,17 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
             const SizedBox(height: Insets.sm),
             Text(
               _kind == BudgetKind.monthly
-                  ? 'Resets every month. This one is for ${period.label()}.'
-                  : 'Carries over month to month until it reaches the target.',
+                  ? t('budget_editor.monthly_blurb',
+                      {'month': period.label(locale)},)
+                  : t('budget_editor.saving_blurb'),
               style: text.bodySmall?.copyWith(color: colors.inkSecondary),
             ),
             const SizedBox(height: Insets.lg),
 
             Text(
-              _kind == BudgetKind.monthly ? 'AMOUNT' : 'TARGET',
+              _kind == BudgetKind.monthly
+                  ? t('budget_editor.amount')
+                  : t('budget_editor.target'),
               style: text.labelSmall,
             ),
             const SizedBox(height: Insets.sm),
@@ -223,19 +232,20 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
                 icon: const Icon(Icons.flag_outlined, size: 17),
                 label: Text(
                   _targetDate == null
-                      ? 'Add a target date (optional)'
-                      : 'By ${DateFormat.yMMMd().format(_targetDate!)}',
+                      ? t('budget_editor.add_target_date')
+                      : t('budget_editor.by_date', {
+                          'date': DateFormat.yMMMd(locale).format(_targetDate!),
+                        }),
                 ),
               ),
             ],
 
             if (household != null && household.isPaired) ...[
               const SizedBox(height: Insets.lg),
-              Text('WHO CONTROLS IT', style: text.labelSmall),
+              Text(t('budget_editor.who_controls'), style: text.labelSmall),
               const SizedBox(height: Insets.xs),
               Text(
-                'The controller sets the categories. You both spend from it '
-                'and you both see everything.',
+                t('budget_editor.who_controls_blurb'),
                 style: text.bodySmall?.copyWith(color: colors.inkSecondary),
               ),
               const SizedBox(height: Insets.sm),
@@ -249,7 +259,9 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
                         size: 20,
                       ),
                       label: Text(
-                        id == uid ? 'You' : household.displayNameOf(id),
+                        id == uid
+                            ? t('common.you')
+                            : household.displayNameOf(id),
                       ),
                       selected: controllerId == id,
                       onSelected: (_) => setState(() => _controllerId = id),
@@ -272,7 +284,9 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_isEdit ? 'Save changes' : 'Create budget'),
+                  : Text(_isEdit
+                      ? t('common.save_changes')
+                      : t('budgets.create')),
             ),
           ],
         ),
