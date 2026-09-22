@@ -149,16 +149,67 @@ service cloud.firestore {
       }
 
       // ------------------------------------------------------ expenses
-      // Deliberately symmetric: the ledger is shared, both members file and
-      // correct entries, and removing a category has to detach entries the
-      // other member wrote.
+      // Reading is symmetric - the shared ledger is the point of the app - but
+      // writing is not: an expense may only be filed against a budget you
+      // control. To spend from the other member's budget you ask them to move
+      // some of it across (see moneyRequests below).
+      //
+      // Ownership of the budget, not authorship of the entry, is what grants
+      // edit rights. That is also what lets a controller deleting a category
+      // detach entries underneath it.
       match /expenses/{eid} {
         allow read: if isMember(hid);
+
         allow create: if isMember(hid)
-                      && request.resource.data.spentBy is string
+                      && request.resource.data.spentBy == uid()
+                      && controlsBudget(hid, request.resource.data.budgetId)
                       && request.resource.data.amount is number
                       && request.resource.data.amount > 0;
-        allow update, delete: if isMember(hid);
+
+        // Both budgets are checked so an entry cannot be moved into a budget
+        // the editor does not control.
+        allow update: if isMember(hid)
+                      && controlsBudget(hid, resource.data.budgetId)
+                      && controlsBudget(hid, request.resource.data.budgetId);
+
+        allow delete: if isMember(hid)
+                      && controlsBudget(hid, resource.data.budgetId);
+      }
+
+      // ------------------------------------------------- money requests
+      // One member asking the other to move money between their budgets.
+      //
+      // Approving only flips `status`. Neither budget document is touched,
+      // because the approver controls the source but not the destination and
+      // could not write to both. The transfer is applied client-side when the
+      // month is added up, from the requests both members can read.
+      match /moneyRequests/{rid} {
+        allow read: if isMember(hid);
+
+        // You may only ask on your own behalf, for money to land somewhere you
+        // control, out of somewhere you do not. That last clause is what stops
+        // this being a way to move money to yourself.
+        allow create: if isMember(hid)
+                      && request.resource.data.requestedBy == uid()
+                      && request.resource.data.requestedFor != uid()
+                      && request.resource.data.status == 'pending'
+                      && request.resource.data.amount is number
+                      && request.resource.data.amount > 0
+                      && controlsBudget(hid, request.resource.data.toBudgetId)
+                      && !controlsBudget(hid, request.resource.data.fromBudgetId);
+
+        // Only the source budget's controller decides, and only by writing the
+        // decision - the amount cannot be edited while approving.
+        allow update: if isMember(hid)
+                      && controlsBudget(hid, resource.data.fromBudgetId)
+                      && changed().hasOnly(
+                           ['status', 'decisionNote', 'decidedAt']);
+
+        // Withdrawing an unanswered request. Safe to delete outright: unlike a
+        // category allocation it leaves nothing half-finished behind.
+        allow delete: if isMember(hid)
+                      && resource.data.requestedBy == uid()
+                      && resource.data.status == 'pending';
       }
     }
 

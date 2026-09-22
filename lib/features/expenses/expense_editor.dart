@@ -11,9 +11,14 @@ import '../../models/budget.dart';
 import '../../models/expense.dart';
 import '../../models/spend_category.dart';
 import '../../state/providers.dart';
+import '../money/request_money_sheet.dart';
 
-/// Opens the add/edit sheet. Both members can file against any budget - the
-/// ledger is shared, so nothing here is gated on who controls the budget.
+/// Opens the add/edit sheet.
+///
+/// An expense may only be filed against a budget the person controls. Both
+/// members still SEE every entry - the ledger is shared - but the money has to
+/// come out of a pot that is yours. To spend from your partner's, ask them to
+/// move some across (see [showRequestMoneySheet]).
 Future<void> showExpenseEditor(
   BuildContext context, {
   Expense? existing,
@@ -86,8 +91,20 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
     super.dispose();
   }
 
-  List<Budget> get _budgets =>
-      ref.watch(budgetsProvider).valueOrNull ?? const [];
+  /// Only budgets this person controls.
+  ///
+  /// This is where "you cannot spend someone else's budget" is enforced in the
+  /// UI: a budget you do not control never appears as an option, so the rule
+  /// shows up as an absence rather than as an error after the fact.
+  ///
+  /// The security rules enforce the same thing server-side. Both matter: the UI
+  /// so the app is honest about what you can do, the rules so a modified client
+  /// cannot do it anyway.
+  List<Budget> get _budgets => ref
+      .watch(summaryProvider)
+      .spendable
+      .map((view) => view.budget)
+      .toList();
 
   List<SpendCategory> _categoriesFor(String? budgetId) {
     if (budgetId == null) return const [];
@@ -250,11 +267,20 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
             const SizedBox(height: Insets.lg),
 
             if (budgets.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Icons.account_balance_wallet_outlined,
                 compact: true,
-                title: 'No budget to file this under',
-                message: 'Create a budget for this month first.',
+                title: 'Nothing of yours to spend from',
+                message:
+                    'An expense comes out of a budget you control. Create one, '
+                    'or ask your partner to move some money across.',
+                actionLabel: 'Request money',
+                onAction: () {
+                  // Close this sheet before opening the next, so the two do not
+                  // stack on top of each other.
+                  Navigator.of(context).pop();
+                  showRequestMoneySheet(context);
+                },
               )
             else ...[
               Text('BUDGET', style: text.labelSmall),
