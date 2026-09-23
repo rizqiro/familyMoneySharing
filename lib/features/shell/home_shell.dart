@@ -37,7 +37,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
     final t = ref.watch(textProvider);
     final pending = ref.watch(pendingApprovalCountProvider);
 
@@ -49,64 +48,215 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     return Scaffold(
       body: IndexedStack(index: _index, children: _pages),
-      floatingActionButton: FloatingActionButton(
+
+      // `centerDocked` parks the button on the middle of the bar's top edge.
+      // The bar below leaves a gap there for it - the two are set up to match,
+      // so changing one means changing the other.
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: _AddButton(
+        enabled: canSpend,
         onPressed: () {
           if (canSpend) {
             showExpenseEditor(context);
           } else {
+            // A dead control that does nothing when tapped is worse than no
+            // control. It cannot open the sheet, so it explains itself instead.
             showToast(context, t('shell.need_budget'));
           }
         },
-        backgroundColor: canSpend ? colors.accent : colors.track,
-        foregroundColor: canSpend ? colors.onAccent : colors.inkMuted,
-        elevation: 0,
-        highlightElevation: 0,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add),
+        label: t('shell.add_expense'),
       ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: colors.hairline)),
+
+      bottomNavigationBar: _BottomBar(
+        index: _index,
+        onSelect: (i) => setState(() => _index = i),
+        pending: pending,
+      ),
+    );
+  }
+}
+
+/// The four-tab bar, with a gap in the middle for the add button.
+///
+/// =============================================================================
+/// WHY NOT NavigationBar
+/// =============================================================================
+/// Material's `NavigationBar` spreads its destinations evenly and has no way to
+/// leave a hole in the middle, so the add button would land on top of an icon.
+/// Four `Expanded` items either side of a fixed-width spacer is the whole trick.
+///
+/// `SafeArea(top: false)` keeps the icons clear of the home indicator on
+/// phones that have one, without padding the top of the bar as well.
+class _BottomBar extends ConsumerWidget {
+  const _BottomBar({
+    required this.index,
+    required this.onSelect,
+    required this.pending,
+  });
+
+  final int index;
+  final ValueChanged<int> onSelect;
+  final int pending;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    // Watched rather than read, so switching language in Settings relabels the
+    // tabs without a restart.
+    final t = ref.watch(textProvider);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.hairline)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              _BarItem(
+                icon: Icons.pie_chart_outline,
+                activeIcon: Icons.pie_chart,
+                label: t('shell.tab_overview'),
+                selected: index == 0,
+                onTap: () => onSelect(0),
+              ),
+              _BarItem(
+                icon: Icons.account_balance_wallet_outlined,
+                activeIcon: Icons.account_balance_wallet,
+                label: t('shell.tab_budgets'),
+                selected: index == 1,
+                onTap: () => onSelect(1),
+              ),
+              // The hole the add button sits in.
+              const SizedBox(width: 76),
+              _BarItem(
+                icon: Icons.receipt_long_outlined,
+                activeIcon: Icons.receipt_long,
+                label: t('shell.tab_ledger'),
+                selected: index == 2,
+                onTap: () => onSelect(2),
+              ),
+              _BarItem(
+                icon: Icons.inbox_outlined,
+                activeIcon: Icons.inbox,
+                label: t('shell.tab_inbox'),
+                selected: index == 3,
+                badge: pending,
+                onTap: () => onSelect(3),
+              ),
+            ],
+          ),
         ),
-        child: NavigationBar(
-          selectedIndex: _index,
-          // setState tells Flutter this widget's state changed, so it should
-          // rebuild. Without it the field changes but the screen does not.
-          onDestinationSelected: (i) => setState(() => _index = i),
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.pie_chart_outline),
-              selectedIcon: const Icon(Icons.pie_chart),
-              label: t('shell.tab_overview'),
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.account_balance_wallet_outlined),
-              selectedIcon: const Icon(Icons.account_balance_wallet),
-              label: t('shell.tab_budgets'),
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.receipt_long_outlined),
-              selectedIcon: const Icon(Icons.receipt_long),
-              label: t('shell.tab_ledger'),
-            ),
-            NavigationDestination(
-              // Counts both kinds of pending decision: category allocations and
-              // money requests.
-              icon: Badge.count(
-                count: pending,
-                isLabelVisible: pending > 0,
-                backgroundColor: colors.negative,
-                child: const Icon(Icons.inbox_outlined),
+      ),
+    );
+  }
+}
+
+class _BarItem extends StatelessWidget {
+  const _BarItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.badge = 0,
+  });
+
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final int badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final tone = selected ? colors.accent : colors.inkMuted;
+
+    return Expanded(
+      child: Semantics(
+        selected: selected,
+        button: true,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 40,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Badge.count(
+                count: badge,
+                isLabelVisible: badge > 0,
+                backgroundColor: colors.accent,
+                textColor: colors.onAccent,
+                child: Icon(selected ? activeIcon : icon, size: 21, color: tone),
               ),
-              selectedIcon: Badge.count(
-                count: pending,
-                isLabelVisible: pending > 0,
-                backgroundColor: colors.negative,
-                child: const Icon(Icons.inbox),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: tone,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.w500,
+                      letterSpacing: 0,
+                    ),
               ),
-              label: t('shell.tab_inbox'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The round add button, with a ring of page colour around it.
+///
+/// The ring is what makes the button look like it is punched through the bar
+/// rather than stuck on top of it: it hides the bar's hairline where the two
+/// overlap. It is drawn as a padded circle behind the button rather than as a
+/// border on it, so the button keeps its full size.
+class _AddButton extends StatelessWidget {
+  const _AddButton({
+    required this.enabled,
+    required this.onPressed,
+    required this.label,
+  });
+
+  final bool enabled;
+  final VoidCallback onPressed;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(color: colors.page, shape: BoxShape.circle),
+      child: Material(
+        color: enabled ? colors.accent : colors.track,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: SizedBox(
+            width: 62,
+            height: 62,
+            child: Semantics(
+              button: true,
+              label: label,
+              child: Icon(
+                Icons.add,
+                size: 26,
+                color: enabled ? colors.onAccent : colors.inkMuted,
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

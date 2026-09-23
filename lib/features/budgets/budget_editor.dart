@@ -286,7 +286,7 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
                     )
                   : Text(_isEdit
                       ? t('common.save_changes')
-                      : t('budgets.create')),
+                      : t('budgets.create'),),
             ),
           ],
         ),

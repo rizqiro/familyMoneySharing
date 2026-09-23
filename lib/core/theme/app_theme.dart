@@ -15,7 +15,14 @@ abstract final class Insets {
 }
 
 abstract final class Radii {
-  static const card = 20.0;
+  /// The standard card. Generous, because the warm palette wants soft corners
+  /// - a tight radius makes a tinted fill look like a highlighter stripe.
+  static const card = 22.0;
+
+  /// A tinted budget card or category row, one step tighter than [card] so a
+  /// tile nested inside a card still reads as nested.
+  static const tile = 20.0;
+
   static const field = 14.0;
   static const pill = 999.0;
   static const bar = 4.0;
@@ -36,7 +43,7 @@ abstract final class AppTheme {
       canvasColor: c.page,
       splashFactory: InkSparkle.splashFactory,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: c.series1,
+        seedColor: c.accent,
         brightness: brightness,
       ).copyWith(
         surface: c.surface,

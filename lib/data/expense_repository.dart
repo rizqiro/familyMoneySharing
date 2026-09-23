@@ -47,6 +47,28 @@ class ExpenseRepository {
         );
   }
 
+  /// Every entry in one calendar year - what the "Yearly" chart filter reads.
+  ///
+  /// `period` is a sortable `YYYY-MM` string, so a whole year is a range query
+  /// on that one field: everything from `2026-01` to `2026-12` inclusive. A
+  /// range filter on a single field needs no composite index, which is why the
+  /// period is stored as text rather than as a number or a pair of fields.
+  ///
+  /// Sorting happens on the client. Firestore would demand a composite index to
+  /// order by `spentAt` while filtering on `period`, and a year of one
+  /// household's entries is a small enough list to sort in memory.
+  Stream<List<Expense>> watchForYear(String householdId, int year) {
+    return _refs
+        .expenses(householdId)
+        .where('period', isGreaterThanOrEqualTo: '$year-01')
+        .where('period', isLessThanOrEqualTo: '$year-12')
+        .snapshots()
+        .map(
+          (snap) => snap.docs.map(Expense.fromDoc).toList()
+            ..sort((a, b) => b.spentAt.compareTo(a.spentAt)),
+        );
+  }
+
   Future<String> add(String householdId, Expense expense) async {
     final ref = _refs.expenses(householdId).doc();
     await ref.set({

@@ -115,7 +115,7 @@ class _JoinPageState extends ConsumerState<JoinPage> {
         content: Text(t('join.confirm_body', {
           'name': invite.createdByName,
           'household': invite.householdName,
-        })),
+        }),),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),

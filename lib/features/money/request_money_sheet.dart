@@ -122,7 +122,7 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
     }
     if (!needsNewBudget && _toBudgetId == null) {
       setState(
-          () => _error = ref.read(textProvider)('request.err_destination'));
+          () => _error = ref.read(textProvider)('request.err_destination'),);
       return;
     }
 

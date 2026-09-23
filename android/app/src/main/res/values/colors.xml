@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The colour the operating system paints BEFORE any Dart has run.
+
+  Without it the app opens on a white flash, then jumps to the terracotta
+  splash a moment later. Matching the two makes the launch look like one
+  continuous screen. Keep this in step with `AppColors.light.accent` in
+  lib/core/theme/app_colors.dart.
+-->
+<resources>
+    <color name="launch_background">#BE3A20</color>
+</resources>

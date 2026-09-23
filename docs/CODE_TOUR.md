@@ -345,15 +345,72 @@ expired") are still English. To finish the job, have them carry a key the way
 - `lib/core/theme/app_theme.dart` - how Flutter's widgets are styled, plus the
   `Insets` and `Radii` spacing scales.
 
-Colour does one job at a time. Ink and surface carry the layout; green and red
-mean money in and money out; the chart slots are a fixed, colourblind-safe
-sequence. Dark mode is its own set of values rather than an inverted copy.
+The palette is warm: a cream page, a warm near-black ink, one terracotta
+accent, and five card tints running butter to rose.
 
+Colour does one job at a time. The tints are **identity** - a budget keeps the
+same one forever, picked from its id by `AppColors.tintFor`, so nothing
+reshuffles when you add a budget. Meaning is carried separately: the accent is
+your money and your spending line, grey is your partner's, green is money put
+aside.
+
+The charts break the warm rule on purpose. Two warm hues are the same colour to
+a colourblind eye, so any two series that must be told apart are red against
+near-black - a lightness difference - and a budget is never a second colour at
+all, it is a dashed line. The reasoning is written out at the top of
+`app_colors.dart`.
+
+Dark mode is its own set of values rather than an inverted copy.
 `context.colors` reaches the palette from any widget.
 
-Reusable pieces live in `lib/core/widgets/`: `SoftCard` (the only container),
-`Meter` (the progress bar with its pace tick), plus `SectionHeader`, `Tag`,
-`EmptyState` and friends in `common.dart`.
+Reusable pieces live in `lib/core/widgets/`:
+
+- `SoftCard` - the plain container.
+- `BudgetTile` / `BudgetMiniCard` - the tinted budget cards, plus `TintChip`
+  for chips that sit on a tint.
+- `Meter` - the progress bar with its pace tick.
+- `RangePills` - the Day / Month / Year filter.
+- `SpendChart` and `FullBleed` - the charts. See below.
+- `SectionHeader`, `Tag`, `EmptyState`, `Stat` and friends in `common.dart`.
+
+---
+
+## 8b. The charts
+
+Two files, split by what they change for:
+
+- `lib/state/chart_series.dart` - **what the numbers are.** Plain Dart, no
+  Flutter, no Firestore. `SpendSeries.daily`, `.monthly` and `.yearly` turn a
+  list of expenses into points, a reference line and a projection. Testable on
+  its own.
+- `lib/core/widgets/spend_chart.dart` - **where the ink goes.** A
+  `CustomPainter` per shape. No chart package: these are three shapes and a
+  dashed line, and drawing them directly is less code than configuring somebody
+  else's defaults.
+
+The filter changes the chart's *shape*, not just its range, because each range
+asks a different question:
+
+| Filter | Question | Shape |
+|---|---|---|
+| Day | which day leaked? | one bar per day, dashed daily allowance |
+| Month | will I make it? | cumulative line, dashed ceiling, dotted projection |
+| Year | which month was heavy? | one bar per month, hollow bars for months to come |
+
+The budget-detail chart adds a third line: the pace that would land exactly on
+budget. Where the projection crosses the ceiling, the overshoot is shaded and a
+sentence names the daily figure that would fix it.
+
+**Full bleed.** Charts run edge to edge, through the page's 20px gutter. Flutter
+has no negative margins - `Padding` asserts its insets are non-negative - so
+`FullBleed` uses an `OverflowBox` to hand the child the full screen width. It
+needs an explicit height, because an `OverflowBox` in a scrolling list is
+otherwise allowed to be infinitely tall.
+
+**Where a range gets its data.** Day and Month read the month already in
+memory, so they cost nothing. Year opens a separate Firestore listener
+(`yearExpensesProvider`), and only while the Yearly filter is selected - watch
+`chartRangeProvider` before adding anything else that queries a year.
 
 ---
 
@@ -380,6 +437,11 @@ Reusable pieces live in `lib/core/widgets/`: `SoftCard` (the only container),
 **Change a permission.** Edit `firebase/firestore.rules`, then
 `firebase deploy --only firestore:rules` - or paste it into the Rules tab in
 the console. Until you deploy, nothing changes.
+
+**Add a chart.** Add a builder to `SpendSeries` in `state/chart_series.dart`,
+a painter in `core/widgets/spend_chart.dart`, and a provider that feeds one to
+the other. Keep the arithmetic out of the painter - that split is the only
+reason either file is readable.
 
 **Add a language.** Add a value to the `AppLanguage` enum, a map in
 `translations_regional.dart`, and a branch in `AppText._tableFor`. The picker

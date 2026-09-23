@@ -21,6 +21,7 @@ import '../models/expense.dart';
 import '../models/household.dart';
 import '../models/money_request.dart';
 import '../models/spend_category.dart';
+import 'chart_series.dart';
 import 'period_summary.dart';
 
 /// Every piece of shared state in the app, in dependency order.
@@ -346,6 +347,144 @@ final summaryLoadingProvider = Provider<bool>((ref) {
 final canSpendProvider = Provider<bool>(
   (ref) => !ref.watch(summaryProvider).hasNothingToSpend,
 );
+
+// ------------------------------------------------------------------ Charts
+
+/// Which shape the dashboard chart is in: by day, by month, or by year.
+///
+/// It is app state rather than page state - a `StatefulWidget`'s `setState`
+/// would lose the choice every time the Overview tab is rebuilt, and the
+/// budget-detail screen wants to read it too.
+class ChartRangeController extends Notifier<ChartRange> {
+  @override
+  ChartRange build() => ChartRange.month;
+
+  void select(ChartRange range) => state = range;
+}
+
+final chartRangeProvider =
+    NotifierProvider<ChartRangeController, ChartRange>(ChartRangeController.new);
+
+/// The budget the charts are about: the first monthly budget the viewer
+/// controls.
+///
+/// "The first" is not arbitrary - budgets come back sorted, so it is stable
+/// between rebuilds, and it is the same budget the Overview shows as its hero.
+/// Null when the viewer controls nothing this month, in which case the chart
+/// falls back to the household's figures.
+final focusBudgetProvider = Provider<BudgetView?>((ref) {
+  final mine = ref.watch(summaryProvider).myMonthly;
+  return mine.isEmpty ? null : mine.first;
+});
+
+/// A calendar year of entries, loaded only while the Yearly filter is on.
+///
+/// The `if (range != year) return empty` guard matters: without it the app
+/// would hold a year-long Firestore listener open for every user, all the
+/// time, to feed a chart almost nobody is looking at. Riverpod tears the
+/// listener down again the moment the filter moves off Yearly.
+final yearExpensesProvider = StreamProvider<List<Expense>>((ref) {
+  if (ref.watch(chartRangeProvider) != ChartRange.year) {
+    return Stream.value(const []);
+  }
+  final householdId = ref.watch(householdIdProvider);
+  if (householdId == null) return Stream.value(const []);
+  final year = ref.watch(selectedPeriodProvider).year;
+  return ref.watch(expenseRepositoryProvider).watchForYear(householdId, year);
+});
+
+/// The numbers behind the dashboard chart.
+///
+/// =============================================================================
+/// WHAT EACH RANGE IS ACTUALLY COUNTING
+/// =============================================================================
+/// Day and Month follow the BUDGET: every entry filed against the budget you
+/// control this month.
+///
+/// Year cannot, because a monthly budget is a separate document each month -
+/// following one budget id across a year would find exactly one month of data.
+/// So the year view follows the PERSON instead: everything you spent, month by
+/// month, with saving-pot contributions left out because putting money aside is
+/// not spending it. The dashed line stays your current monthly ceiling, which is
+/// the only budget figure that means anything across all twelve months.
+///
+/// That difference is deliberate and worth knowing when you read the chart: the
+/// first two answer "how is this budget doing", the third answers "how is my
+/// spending doing".
+final dashboardSeriesProvider = Provider<SpendSeries>((ref) {
+  final household = ref.watch(householdProvider).valueOrNull;
+  if (household == null) return SpendSeries.empty;
+
+  final summary = ref.watch(summaryProvider);
+  final range = ref.watch(chartRangeProvider);
+  final period = ref.watch(selectedPeriodProvider);
+  final focus = ref.watch(focusBudgetProvider);
+
+  // With no budget of your own, the chart falls back to the household's
+  // monthly budgets so the screen still has something honest to show.
+  final planned = focus?.planned ?? summary.planned;
+  final savingIds = summary.savings.map((b) => b.budget.id).toSet();
+
+  List<Expense> forThisBudget() {
+    if (focus == null) {
+      return summary.expenses
+          .where((e) => !savingIds.contains(e.budgetId))
+          .toList();
+    }
+    return summary.expenses
+        .where((e) => e.budgetId == focus.budget.id)
+        .toList();
+  }
+
+  return switch (range) {
+    ChartRange.day => SpendSeries.daily(
+        period: period,
+        monthStartDay: household.monthStartDay,
+        expenses: forThisBudget(),
+        planned: planned,
+      ),
+    ChartRange.month => SpendSeries.monthly(
+        period: period,
+        monthStartDay: household.monthStartDay,
+        expenses: forThisBudget(),
+        planned: planned,
+      ),
+    ChartRange.year => SpendSeries.yearly(
+        year: period.year,
+        expenses: (ref.watch(yearExpensesProvider).valueOrNull ?? const [])
+            .where((e) => !savingIds.contains(e.budgetId))
+            .where(
+              (e) => summary.viewerUid == null || e.spentBy == summary.viewerUid,
+            )
+            .toList(),
+        monthlyBudget: planned,
+        locale: ref.watch(dateLocaleProvider),
+      ),
+  };
+});
+
+/// The same arithmetic for one budget on its detail screen, always by month.
+///
+/// A `Provider.family` is a provider that takes an argument. Riverpod keeps one
+/// cached value per distinct argument, so opening two budgets does not make
+/// them share a chart.
+final budgetSeriesProvider = Provider.family<SpendSeries, String>((ref, id) {
+  final household = ref.watch(householdProvider).valueOrNull;
+  if (household == null) return SpendSeries.empty;
+
+  final summary = ref.watch(summaryProvider);
+  final matches = [...summary.monthly, ...summary.savings]
+      .where((v) => v.budget.id == id);
+  if (matches.isEmpty) return SpendSeries.empty;
+  final view = matches.first;
+
+  return SpendSeries.monthly(
+    period: summary.period,
+    monthStartDay: household.monthStartDay,
+    expenses: summary.expenses.where((e) => e.budgetId == id).toList(),
+    planned: view.planned,
+  );
+});
 
 // -------------------------------------------------------------- Approvals
 
