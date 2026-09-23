@@ -219,7 +219,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             )
                           : Text(_isSignUp
                               ? t('auth.create_account')
-                              : t('auth.sign_in')),
+                              : t('auth.sign_in'),),
                     ),
                     const SizedBox(height: Insets.lg),
 

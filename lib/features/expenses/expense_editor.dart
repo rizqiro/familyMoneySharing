@@ -359,7 +359,7 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
                     )
                   : Text(_isEdit
                       ? t('common.save_changes')
-                      : t('expense.add')),
+                      : t('expense.add'),),
             ),
           ],
         ),

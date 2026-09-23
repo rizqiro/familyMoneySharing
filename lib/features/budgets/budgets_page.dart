@@ -2,12 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/budget_tile.dart';
 import '../../core/widgets/common.dart';
-import '../../core/widgets/meter.dart';
 import '../../core/widgets/period_switcher.dart';
-import '../../core/widgets/soft_card.dart';
 import '../../state/period_summary.dart';
 import '../../state/providers.dart';
 import 'budget_detail_page.dart';
@@ -58,7 +56,7 @@ class BudgetsPage extends ConsumerWidget {
                 SectionHeader(title: t('budgets.this_month')),
                 for (final view in summary.monthly)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: Insets.sm),
+                    padding: const EdgeInsets.only(bottom: Insets.md),
                     child: _BudgetCard(view: view),
                   ),
                 const SizedBox(height: Insets.xl),
@@ -67,7 +65,7 @@ class BudgetsPage extends ConsumerWidget {
                 SectionHeader(title: t('budgets.saving_pots')),
                 for (final view in summary.savings)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: Insets.sm),
+                    padding: const EdgeInsets.only(bottom: Insets.md),
                     child: _BudgetCard(view: view, saving: true),
                   ),
               ],
@@ -113,7 +111,7 @@ class _EmptyMonthState extends ConsumerState<_EmptyMonth> {
         context,
         copied == 0
             ? t('budgets.nothing_to_copy',
-                {'month': period.previous().label(locale)})
+                {'month': period.previous().label(locale)},)
             : t.plural(copied, 'budgets.copied_one', 'budgets.copied_many'),
       );
     } finally {
@@ -151,111 +149,50 @@ class _BudgetCard extends ConsumerWidget {
   const _BudgetCard({required this.view, this.saving = false});
 
   final BudgetView view;
+
+  /// Kept for call-site readability; [BudgetTile] works the kind out from the
+  /// budget itself.
   final bool saving;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.colors;
-    final text = Theme.of(context).textTheme;
     final t = ref.watch(textProvider);
     final money = ref.watch(moneyProvider);
-    final household = ref.watch(householdProvider).valueOrNull;
-    final uid = ref.watch(currentUidProvider);
 
-    final controller = view.budget.controllerId == uid
-        ? t('budgets.you_control')
-        : t('budgets.partner_controls', {
-            'name': household?.displayNameOf(view.budget.controllerId) ??
-                t('common.partner'),
-          });
-
-    return SoftCard(
+    return BudgetTile(
+      view: view,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => BudgetDetailPage(budgetId: view.budget.id),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      view.budget.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.titleMedium,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      controller,
-                      style: text.bodySmall?.copyWith(color: colors.inkMuted),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    money.format(view.spent),
-                    style: text.titleMedium?.copyWith(
-                      color: view.isOver ? colors.negative : colors.ink,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  Text(
-                    '${t('common.of')} ${money.format(view.planned)}',
-                    style: text.bodySmall?.copyWith(color: colors.inkMuted),
-                  ),
-                ],
-              ),
-            ],
+      // The chips are facts about the plan rather than about the spending, so
+      // they sit below the meter: how many categories it is carved into, what
+      // is still waiting on the other member, what is left over.
+      trailing: [
+        TintChip(
+          label: t.plural(
+            view.categories.length,
+            'budgets.categories_one',
+            'budgets.categories_many',
           ),
-          const SizedBox(height: Insets.md),
-          Meter(
-            progress: view.progress,
-            isOver: view.isOver,
-            color: saving ? colors.positive : null,
+        ),
+        if (view.pendingCount > 0)
+          TintChip(
+            label: t('budgets.awaiting', {'count': '${view.pendingCount}'}),
           ),
-          const SizedBox(height: Insets.md),
-          Wrap(
-            spacing: Insets.sm,
-            runSpacing: Insets.sm,
-            children: [
-              Tag(
-                label: t.plural(view.categories.length,
-                    'budgets.categories_one', 'budgets.categories_many',),
-              ),
-              if (view.pendingCount > 0)
-                Tag(
-                  label: t('budgets.awaiting',
-                      {'count': '${view.pendingCount}'},),
-                  icon: Icons.schedule,
-                  color: colors.warning,
-                  filled: true,
-                ),
-              if (view.isOverAllocated)
-                Tag(
-                  label: t('budgets.over_allocated'),
-                  icon: Icons.warning_amber_rounded,
-                  color: colors.negative,
-                  filled: true,
-                ),
-              if (!view.isOverAllocated && view.unallocated > 0)
-                Tag(
-                  label: t('budgets.unallocated',
-                      {'amount': money.compact(view.unallocated)},),
-                ),
-            ],
+        if (view.isOverAllocated)
+          TintChip(label: t('budgets.over_allocated'), emphasis: true),
+        if (!view.isOverAllocated && view.unallocated > 0)
+          TintChip(
+            label: t('budgets.unallocated',
+                {'amount': money.compact(view.unallocated)},),
           ),
-        ],
-      ),
+        // The one chip that is a judgement rather than a fact, so it is the one
+        // that gets the accent fill.
+        if (!view.budget.isSaving && view.isOver)
+          TintChip(label: t('budgets.over_spent'), emphasis: true),
+      ],
     );
   }
 }

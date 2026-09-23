@@ -167,7 +167,7 @@ class SettingsPage extends ConsumerWidget {
                     household.monthStartDay == 1
                         ? t('settings.month_first')
                         : t('settings.month_day',
-                            {'day': '${household.monthStartDay}'}),
+                            {'day': '${household.monthStartDay}'},),
                   ),
                   trailing: Icon(Icons.chevron_right, color: colors.inkMuted),
                   onTap: () => _pickStartDay(

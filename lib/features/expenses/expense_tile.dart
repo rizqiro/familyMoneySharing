@@ -64,7 +64,12 @@ class ExpenseTile extends ConsumerWidget {
               height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: colors.surfaceSunken,
+                // Tinted with its budget's own colour, so a row in the ledger
+                // and a card on the Budgets tab carry the same mark. An entry
+                // with no budget left (a deleted one) falls back to grey.
+                color: expense.budgetId.isEmpty
+                    ? colors.surfaceSunken
+                    : colors.tintFor(expense.budgetId).fill,
                 shape: BoxShape.circle,
               ),
               child: Text(

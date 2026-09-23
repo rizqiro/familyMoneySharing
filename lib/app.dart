@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/common.dart';
 import 'features/auth/sign_in_page.dart';
+import 'features/onboarding/splash_page.dart';
 import 'features/onboarding/welcome_page.dart';
 import 'features/shell/home_shell.dart';
 import 'state/providers.dart';
@@ -19,7 +20,10 @@ class FamilyMoneyApp extends StatelessWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
-      home: const _Gate(),
+      // The splash holds the first frame for a beat, so a cold start opens on
+      // the app's own colour instead of a white flash and a spinner. Once it
+      // steps aside, _Gate decides which of the three real states we are in.
+      home: const SplashGate(child: _Gate()),
     );
   }
 }
@@ -34,24 +38,24 @@ class _Gate extends ConsumerWidget {
     final auth = ref.watch(authStateProvider);
 
     return auth.when(
-      loading: () => const _Splash(),
+      loading: () => const SplashPage(),
       error: (error, _) => _Fatal(message: '$error'),
       data: (user) {
         if (user == null) return const SignInPage();
 
         final profile = ref.watch(profileProvider);
         return profile.when(
-          loading: () => const _Splash(),
+          loading: () => const SplashPage(),
           error: (error, _) => _Fatal(message: '$error'),
           data: (appUser) {
-            if (appUser == null) return const _Splash();
+            if (appUser == null) return const SplashPage();
             if (!appUser.hasHousehold) return const WelcomePage();
 
             // The profile can point at a household that is gone - a join that
             // failed part-way, or the other member removing this one. Treat a
             // missing household as having none rather than spinning forever.
             return ref.watch(householdProvider).when(
-                  loading: () => const _Splash(),
+                  loading: () => const SplashPage(),
                   error: (error, _) => _Fatal(message: '$error'),
                   data: (household) => household == null
                       ? const WelcomePage()
@@ -60,23 +64,6 @@ class _Gate extends ConsumerWidget {
           },
         );
       },
-    );
-  }
-}
-
-class _Splash extends StatelessWidget {
-  const _Splash();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
     );
   }
 }

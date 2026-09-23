@@ -1,14 +1,16 @@
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format/period.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/meter.dart';
 import '../../core/widgets/soft_card.dart';
+import '../../core/widgets/spend_chart.dart';
+import '../../models/household.dart';
 import '../../models/spend_category.dart';
+import '../../state/chart_series.dart';
 import '../../state/period_summary.dart';
 import '../../state/providers.dart';
 import '../expenses/expense_editor.dart';
@@ -114,82 +116,10 @@ class BudgetDetailPage extends ConsumerWidget {
             120,
           ),
           children: [
-            SoftCard(
-              padding: const EdgeInsets.all(Insets.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    view.budget.isSaving
-                        ? t('detail.put_aside')
-                        : t('detail.spent'),
-                    style: text.labelSmall?.copyWith(color: colors.inkMuted),
-                  ),
-                  const SizedBox(height: Insets.sm),
-                  Text(
-                    money.format(view.spent),
-                    style: text.displayMedium?.copyWith(
-                      color: view.isOver ? colors.negative : colors.ink,
-                    ),
-                  ),
-                  const SizedBox(height: Insets.lg),
-                  Meter(
-                    progress: view.progress,
-                    isOver: view.isOver,
-                    height: 10,
-                    color: view.budget.isSaving ? colors.positive : null,
-                  ),
-                  const SizedBox(height: Insets.lg),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Stat(
-                          label: view.budget.isSaving
-                              ? t('detail.target')
-                              : t('detail.planned'),
-                          value: money.format(view.planned),
-                        ),
-                      ),
-                      Expanded(
-                        child: Stat(
-                          label: view.isOver
-                              ? t('detail.over_by')
-                              : t('detail.left'),
-                          value: money.format(view.remaining.abs()),
-                          tone: view.isOver ? colors.negative : null,
-                        ),
-                      ),
-                      Expanded(
-                        child: Stat(
-                          label: t('detail.unallocated'),
-                          value: money.format(view.unallocated),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: Insets.lg),
-                  Row(
-                    children: [
-                      MemberAvatar(
-                        initial: household
-                                .member(view.budget.controllerId)
-                                ?.initial ??
-                            '?',
-                        size: 24,
-                      ),
-                      const SizedBox(width: Insets.sm),
-                      Text(
-                        isController
-                            ? t('detail.you_control_here')
-                            : t('detail.controls_here',
-                                {'name': controllerName},),
-                        style: text.bodySmall
-                            ?.copyWith(color: colors.inkSecondary),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            _SpentSection(
+              view: view,
+              household: household,
+              isController: isController,
             ),
             const SizedBox(height: Insets.xl),
 
@@ -393,6 +323,378 @@ class BudgetDetailPage extends ConsumerWidget {
           householdId: householdId,
           categoryId: view.category.id,
         );
+  }
+}
+
+/// The top of a budget: what has been spent, drawn three ways.
+///
+/// =============================================================================
+/// WHY A BURN-UP AND NOT A PIE
+/// =============================================================================
+/// A pie chart answers "what share of the budget is gone". You already know
+/// that - the meter says it in one bar. What you actually want to know standing
+/// in a shop on the 22nd is "am I going to make it", and that is a question
+/// about RATE, which a pie cannot show at all.
+///
+/// So the chart is a burn-up with three lines:
+///
+///   * solid red    - what you have actually spent, day by day, adding up;
+///   * dashed grey  - the pace that would land exactly on budget on the last
+///                    day. Your line sitting above it means you are spending
+///                    faster than the month is passing;
+///   * dotted red   - where today's pace lands if nothing changes.
+///
+/// Where the dotted line crosses the budget, the overshoot is shaded, and the
+/// warning underneath names the daily figure that would fix it. That last
+/// sentence is the only thing on the screen anyone can act on.
+class _SpentSection extends ConsumerWidget {
+  const _SpentSection({
+    required this.view,
+    required this.household,
+    required this.isController,
+  });
+
+  final BudgetView view;
+  final Household household;
+  final bool isController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
+    final money = ref.watch(moneyProvider);
+    final summary = ref.watch(summaryProvider);
+    final series = ref.watch(budgetSeriesProvider(view.budget.id));
+    final saving = view.budget.isSaving;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          saving ? t('detail.put_aside') : t('detail.spent'),
+          style: text.labelSmall?.copyWith(color: colors.inkMuted),
+        ),
+        const SizedBox(height: Insets.sm),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Flexible(
+              child: Text(
+                money.format(view.spent),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.displayMedium?.copyWith(
+                  color: view.isOver ? colors.accentDeep : colors.ink,
+                ),
+              ),
+            ),
+            const SizedBox(width: Insets.md),
+            Text(
+              t(saving ? 'detail.of_target' : 'detail.of_planned',
+                  {'amount': money.format(view.planned)},),
+              style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
+            ),
+          ],
+        ),
+        const SizedBox(height: Insets.lg),
+
+        // A saving pot is filling up, not draining, so the pace line and the
+        // projection mean nothing there - it gets the plain meter instead.
+        if (saving)
+          Meter(
+            progress: view.progress,
+            height: 10,
+            color: colors.positive,
+          )
+        else ...[
+          FullBleed(
+            height: 200,
+            child: SpendChart(
+              series: series,
+              money: money,
+              height: 200,
+              showPaceLine: true,
+              semanticLabel: t('chart.a11y', {
+                'range': t(ChartRange.month.labelKey),
+                'spent': money.format(series.spent),
+                'budget': money.format(series.reference),
+              }),
+              referenceLabel: t('chart.budget_of',
+                  {'amount': money.compact(series.reference)},),
+              calloutLabel:
+                  series.spent > 0 ? money.format(series.spent) : null,
+            ),
+          ),
+          const SizedBox(height: Insets.sm),
+          Wrap(
+            spacing: Insets.lg,
+            runSpacing: Insets.sm,
+            children: [
+              ChartLegendKey(
+                label: t('chart.legend_spent'),
+                color: colors.series1,
+              ),
+              ChartLegendKey(
+                label: t('chart.legend_pace'),
+                color: colors.inkMuted,
+                dashed: true,
+              ),
+              ChartLegendKey(
+                label: t('chart.legend_projection'),
+                color: colors.series1,
+                dashed: true,
+                opacity: 0.6,
+              ),
+            ],
+          ),
+          if (series.projectedOverspend > 0) ...[
+            const SizedBox(height: Insets.lg),
+            _PaceWarning(
+              series: series,
+              period: summary.period,
+              monthStartDay: summary.monthStartDay,
+            ),
+          ],
+        ],
+
+        const SizedBox(height: Insets.xl),
+        Row(
+          children: [
+            Expanded(
+              child: Stat(
+                label: saving ? t('detail.target') : t('detail.planned'),
+                value: money.format(view.planned),
+              ),
+            ),
+            Expanded(
+              child: Stat(
+                label: view.isOver ? t('detail.over_by') : t('detail.left'),
+                value: money.format(view.remaining.abs()),
+                tone: view.isOver ? colors.accentDeep : null,
+              ),
+            ),
+            Expanded(
+              child: Stat(
+                label: t('detail.unallocated'),
+                value: money.format(view.unallocated),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Insets.lg),
+        Row(
+          children: [
+            MemberAvatar(
+              initial:
+                  household.member(view.budget.controllerId)?.initial ?? '?',
+              size: 24,
+            ),
+            const SizedBox(width: Insets.sm),
+            Expanded(
+              child: Text(
+                isController
+                    ? t('detail.you_control_here')
+                    : t('detail.controls_here', {
+                        'name':
+                            household.displayNameOf(view.budget.controllerId),
+                      }),
+                style: text.bodySmall?.copyWith(color: colors.inkSecondary),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Insets.xl),
+        _WhereItStands(view: view),
+      ],
+    );
+  }
+}
+
+/// "Keep going at this rate and you land Rp 382.000 over. Drop to Rp 65.000 a
+/// day and you land on it."
+///
+/// Two numbers: the damage, and the fix. A warning with only the first is just
+/// bad news.
+class _PaceWarning extends ConsumerWidget {
+  const _PaceWarning({
+    required this.series,
+    required this.period,
+    required this.monthStartDay,
+  });
+
+  final SpendSeries series;
+  final Period period;
+  final int monthStartDay;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final t = ref.watch(textProvider);
+    final money = ref.watch(moneyProvider);
+    final fix = series.dailyAllowanceLeft(period, monthStartDay);
+
+    return Container(
+      padding: const EdgeInsets.all(Insets.md + 2),
+      decoration: BoxDecoration(
+        color: colors.accentSoft,
+        borderRadius: BorderRadius.circular(Radii.field),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 17,
+            color: colors.onAccentSoft,
+          ),
+          const SizedBox(width: Insets.sm + 1),
+          Expanded(
+            child: Text(
+              '${t('chart.projection_over', {
+                    'amount': money.format(series.projected),
+                    'over': money.format(series.projectedOverspend),
+                  })} ${fix > 0 ? t('chart.fix_daily', {'amount': money.format(fix)}) : t('chart.fix_stop')}',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: colors.onAccentSoft),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Where the budget's money physically is right now.
+///
+/// One bar in three parts, because "Rp 520.000 left" hides a real difference:
+/// money already spent is gone, money sitting in a category is spoken for, and
+/// money not yet carved up is the only part you can freely move.
+class _WhereItStands extends ConsumerWidget {
+  const _WhereItStands({required this.view});
+
+  final BudgetView view;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
+    final money = ref.watch(moneyProvider);
+
+    final spent = view.spent;
+    final categorised = view.categories.fold(0.0, (sum, c) => sum + c.spent);
+    // What the categories still hold: allocated to them, not yet spent from
+    // them. Clamped because a category can be overspent, which would otherwise
+    // make this negative and the bar draw backwards.
+    final reserved =
+        (view.allocated - categorised).clamp(0.0, double.infinity);
+    final free = view.unallocated;
+    final total = spent + reserved + free;
+    if (total <= 0) return const SizedBox.shrink();
+
+    return SoftCard(
+      padding: const EdgeInsets.all(Insets.lg + 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t('detail.where_it_stands'),
+            style: text.labelSmall?.copyWith(color: colors.inkMuted),
+          ),
+          const SizedBox(height: Insets.md),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: SizedBox(
+              height: 26,
+              // `Flex` weights, not pixels: each part takes a share of the row
+              // proportional to its amount, so the bar always fills the width
+              // whatever the figures are. The `.round()` is because flex
+              // factors have to be whole numbers; 1000 keeps enough precision
+              // that a 0.1% slice is still a pixel.
+              child: Row(
+                children: [
+                  for (final part in [
+                    (spent, colors.series1),
+                    (reserved, colors.tintFor(view.budget.id).badge),
+                    (free, colors.track),
+                  ])
+                    if (part.$1 > 0)
+                      Expanded(
+                        flex: (part.$1 / total * 1000).round().clamp(1, 1000),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 2),
+                          color: part.$2,
+                        ),
+                      ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Insets.md),
+          _StandRow(
+            color: colors.series1,
+            label: t('detail.already_spent'),
+            value: money.format(spent),
+          ),
+          _StandRow(
+            color: colors.tintFor(view.budget.id).badge,
+            label: t('detail.in_categories'),
+            value: money.format(reserved),
+          ),
+          _StandRow(
+            color: colors.track,
+            label: t('detail.not_carved_up'),
+            value: money.format(free),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StandRow extends StatelessWidget {
+  const _StandRow({
+    required this.color,
+    required this.label,
+    required this.value,
+  });
+
+  final Color color;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: Insets.sm),
+      child: Row(
+        children: [
+          Container(
+            width: 9,
+            height: 9,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+              border: Border.all(color: context.colors.hairline),
+            ),
+          ),
+          const SizedBox(width: Insets.sm),
+          Expanded(child: Text(label, style: text.bodyMedium)),
+          Text(
+            value,
+            style: text.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -74,7 +74,7 @@ class AppText {
   /// arms usually hold the same string there. It exists for English, and for
   /// any language added later that needs it.
   String plural(int count, String oneKey, String manyKey,
-      [Map<String, String>? vars]) {
+      [Map<String, String>? vars,]) {
     final all = {'count': '$count', ...?vars};
     return call(count == 1 ? oneKey : manyKey, all);
   }
@@ -185,6 +185,7 @@ const Map<String, String> _id = {
   'shell.tab_budgets': 'Anggaran',
   'shell.tab_ledger': 'Catatan',
   'shell.tab_inbox': 'Kotak masuk',
+  'shell.add_expense': 'Catat pengeluaran',
   'shell.need_budget':
       'Buat anggaran kamu sendiri dulu, atau minta uang ke pasangan.',
 
@@ -251,6 +252,7 @@ const Map<String, String> _id = {
   'budgets.awaiting': '{count} menunggu persetujuan',
   'budgets.over_allocated': 'Pembagian melebihi rencana',
   'budgets.unallocated': '{amount} belum dibagi',
+  'budgets.over_spent': 'Sudah lewat anggaran',
   'budgets.you_control': 'Kamu yang pegang ini',
   'budgets.partner_controls': '{name} yang pegang ini',
 
@@ -294,6 +296,12 @@ const Map<String, String> _id = {
   'status.pending': 'Menunggu persetujuan',
   'status.approved': 'Disetujui',
   'status.rejected': 'Ditolak',
+  'detail.of_planned': 'dari {amount}',
+  'detail.of_target': 'dari target {amount}',
+  'detail.where_it_stands': 'UANGNYA BERDIRI DI SINI',
+  'detail.already_spent': 'Sudah dibelanjakan',
+  'detail.in_categories': 'Masih dijatah kategori',
+  'detail.not_carved_up': 'Belum dibagi',
   'detail.spent': 'TERPAKAI',
   'detail.put_aside': 'DITABUNG',
   'detail.planned': 'Direncanakan',
@@ -445,7 +453,35 @@ const Map<String, String> _id = {
   'settings.your_name': 'Nama kamu',
   'settings.household_name': 'Nama rumah tangga',
 
+  // -------------------------------------------------------------- chart
+  'chart.range_day': 'Harian',
+  'chart.range_month': 'Bulanan',
+  'chart.range_year': 'Tahunan',
+  'chart.left_in': 'Sisa di {name} \u2014 anggaran kamu',
+  'chart.over_in': 'Lebih di {name} \u2014 anggaran kamu',
+  'chart.left_household': 'Sisa di seluruh anggaran rumah tangga',
+  'chart.over_household': 'Lebih dari seluruh anggaran rumah tangga',
+  'chart.budget_of': 'Anggaran {amount}',
+  'chart.projection_ok':
+      'Dengan laju ini kamu selesai di {amount} \u2014 sisa {left}.',
+  'chart.projection_over':
+      'Dengan laju ini kamu selesai di {amount} \u2014 lebih {over}.',
+  'chart.projection_none': 'Belum ada yang dicatat bulan ini.',
+  'chart.fix_daily': 'Turunkan ke {amount}/hari supaya pas.',
+  'chart.fix_stop': 'Anggarannya sudah habis.',
+  'chart.daily_note_none': 'Jatah harian {amount}. Belum ada hari yang lewat.',
+  'chart.daily_note_one': 'Jatah harian {amount}. {count} hari lewat jatah.',
+  'chart.daily_note_many': 'Jatah harian {amount}. {count} hari lewat jatah.',
+  'chart.year_note': '{amount} terpakai sepanjang {year}.',
+  'chart.legend_spent': 'Terpakai',
+  'chart.legend_pace': 'Laju ideal',
+  'chart.legend_projection': 'Perkiraan',
+  'chart.a11y':
+      'Grafik {range}. {spent} terpakai dari anggaran {budget}.',
+
   // ---------------------------------------------------------- app-level
+  'splash.preparing': 'Menyiapkan rumah tangga kamu\u2026',
+
   'app.cannot_reach': 'Tidak bisa mengambil data kamu',
   'app.setup_title': 'Tinggal satu langkah lagi',
 };
@@ -540,6 +576,7 @@ const Map<String, String> _en = {
   'shell.tab_budgets': 'Budgets',
   'shell.tab_ledger': 'Ledger',
   'shell.tab_inbox': 'Inbox',
+  'shell.add_expense': 'Add an expense',
   'shell.need_budget': 'Create a budget of your own first, or ask for money.',
 
   'dashboard.subtitle': 'Shared overview',
@@ -602,6 +639,7 @@ const Map<String, String> _en = {
   'budgets.awaiting': '{count} awaiting confirmation',
   'budgets.over_allocated': 'Allocated over plan',
   'budgets.unallocated': '{amount} unallocated',
+  'budgets.over_spent': 'Over budget',
   'budgets.you_control': 'You control this',
   'budgets.partner_controls': '{name} controls this',
 
@@ -641,6 +679,12 @@ const Map<String, String> _en = {
   'status.pending': 'Awaiting confirmation',
   'status.approved': 'Confirmed',
   'status.rejected': 'Declined',
+  'detail.of_planned': 'of {amount}',
+  'detail.of_target': 'of a {amount} target',
+  'detail.where_it_stands': 'WHERE THE MONEY STANDS',
+  'detail.already_spent': 'Already spent',
+  'detail.in_categories': 'Still held by categories',
+  'detail.not_carved_up': 'Not carved up yet',
   'detail.spent': 'SPENT',
   'detail.put_aside': 'PUT ASIDE',
   'detail.planned': 'Planned',
@@ -785,6 +829,33 @@ const Map<String, String> _en = {
   'settings.leave_cta': 'Leave',
   'settings.your_name': 'Your name',
   'settings.household_name': 'Household name',
+
+  'chart.range_day': 'Daily',
+  'chart.range_month': 'Monthly',
+  'chart.range_year': 'Yearly',
+  'chart.left_in': 'Left in {name} \u2014 your budget',
+  'chart.over_in': 'Over in {name} \u2014 your budget',
+  'chart.left_household': 'Left across the household budgets',
+  'chart.over_household': 'Over the household budgets',
+  'chart.budget_of': 'Budget {amount}',
+  'chart.projection_ok':
+      'At this rate you finish at {amount} \u2014 {left} to spare.',
+  'chart.projection_over':
+      'At this rate you finish at {amount} \u2014 {over} over.',
+  'chart.projection_none': 'Nothing recorded this month yet.',
+  'chart.fix_daily': 'Drop to {amount} a day and you land on it.',
+  'chart.fix_stop': 'The budget is already spent.',
+  'chart.daily_note_none': '{amount} a day to play with. No day went over yet.',
+  'chart.daily_note_one': '{amount} a day to play with. {count} day went over.',
+  'chart.daily_note_many':
+      '{amount} a day to play with. {count} days went over.',
+  'chart.year_note': '{amount} spent across {year}.',
+  'chart.legend_spent': 'Spent',
+  'chart.legend_pace': 'Even pace',
+  'chart.legend_projection': 'Projection',
+  'chart.a11y': '{range} chart. {spent} spent of a {budget} budget.',
+
+  'splash.preparing': 'Getting your household ready\u2026',
 
   'app.cannot_reach': 'Could not reach your data',
   'app.setup_title': 'One setup step left',
