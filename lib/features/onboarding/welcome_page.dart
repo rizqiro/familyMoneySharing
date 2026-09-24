@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/format/failure.dart';
 import '../../core/format/money.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -51,7 +52,11 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
     } on HouseholdFailure catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) {
+        // Raw Firebase codes mean nothing to whoever is holding the phone.
+        // See core/format/failure.dart.
+        setState(() => _error = describeFailure(e, ref.read(textProvider)));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
