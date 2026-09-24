@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/format/failure.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/common.dart';
 import 'features/auth/sign_in_page.dart';
@@ -39,14 +40,14 @@ class _Gate extends ConsumerWidget {
 
     return auth.when(
       loading: () => const SplashPage(),
-      error: (error, _) => _Fatal(message: '$error'),
+      error: (error, _) => _Fatal(error: error),
       data: (user) {
         if (user == null) return const SignInPage();
 
         final profile = ref.watch(profileProvider);
         return profile.when(
           loading: () => const SplashPage(),
-          error: (error, _) => _Fatal(message: '$error'),
+          error: (error, _) => _Fatal(error: error),
           data: (appUser) {
             if (appUser == null) return const SplashPage();
             if (!appUser.hasHousehold) return const WelcomePage();
@@ -56,7 +57,7 @@ class _Gate extends ConsumerWidget {
             // missing household as having none rather than spinning forever.
             return ref.watch(householdProvider).when(
                   loading: () => const SplashPage(),
-                  error: (error, _) => _Fatal(message: '$error'),
+                  error: (error, _) => _Fatal(error: error),
                   data: (household) => household == null
                       ? const WelcomePage()
                       : const HomeShell(),
@@ -69,13 +70,17 @@ class _Gate extends ConsumerWidget {
 }
 
 class _Fatal extends ConsumerWidget {
-  const _Fatal({required this.message});
+  const _Fatal({required this.error});
 
-  final String message;
+  /// The raw thrown object rather than a string, so the message can be built
+  /// in the language the app is currently set to - which is not known until
+  /// this widget builds.
+  final Object error;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = ref.watch(textProvider);
+    final message = describeFailure(error, t);
     return Scaffold(
       body: SafeArea(
         child: Padding(

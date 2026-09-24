@@ -237,6 +237,28 @@ pots, so one query per month picks up both.
 **`permission-denied` everywhere**
 The rules were never deployed. Run the `firebase deploy` command in step 6.
 
+**`permission-denied` on ONE thing, when everything else works**
+The rules ARE deployed, but an older copy of them. Every time
+`firebase/firestore.rules` changes in the repo, the copy in the console has to
+be replaced - it does not update itself, and nothing warns you.
+
+The symptom is specific: the app works, right up until you touch the feature
+whose rules are missing. A collection with no matching rule is denied by
+default, so it fails on the very first write.
+
+Known instance: asking your partner for money ("Minta uang") fails with
+permission-denied if the deployed rules predate the `moneyRequests` block.
+
+The fix is the same paste as the first time:
+
+1. Firebase Console -> **Firestore Database** -> **Rules**.
+2. Select everything in the editor and delete it.
+3. Paste the whole of `firebase/firestore.rules` from the repo.
+4. **Publish**.
+
+To check before you paste: press Ctrl+F in the rules editor and search for
+`moneyRequests`. No match means the deployed copy is out of date.
+
 **"The query requires an index" with a console link**
 Either click the link, or run the index deploy in step 6.
 

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../core/format/failure.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -47,7 +48,11 @@ class _InvitePageState extends ConsumerState<InvitePage> {
     } on HouseholdFailure catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) {
+        // Raw Firebase codes mean nothing to whoever is holding the phone.
+        // See core/format/failure.dart.
+        setState(() => _error = describeFailure(e, ref.read(textProvider)));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -479,6 +479,28 @@ const Map<String, String> _id = {
   'chart.a11y':
       'Grafik {range}. {spent} terpakai dari anggaran {budget}.',
 
+  // -------------------------------------------------------------- errors
+  'error.permission_denied':
+      'Firebase menolak permintaan ini. Biasanya karena aturan keamanan '
+          'belum dipasang di Firebase Console \u2014 buka tab Rules, tempel '
+          'isi firebase/firestore.rules, lalu Publish. Kalau sudah dipasang, '
+          'berarti ini memang bukan milik kamu.',
+  'error.offline': 'Tidak bisa menghubungi Firebase. Cek koneksi kamu; '
+      'catatan yang sudah dibuat akan terkirim sendiri nanti.',
+  'error.signed_out': 'Sesi kamu habis. Masuk lagi, ya.',
+  'error.not_found': 'Datanya sudah tidak ada. Mungkin baru dihapus.',
+  'error.already_exists': 'Datanya sudah ada.',
+  'error.needs_index':
+      'Firestore butuh index untuk query ini. Buka log error-nya \u2014 ada '
+          'tautan untuk membuatnya sekali klik.',
+  'error.quota': 'Kuota Firebase habis untuk hari ini. Coba lagi besok.',
+  'error.email_taken': 'Email itu sudah dipakai.',
+  'error.email_invalid': 'Emailnya tidak valid.',
+  'error.password_weak': 'Kata sandinya terlalu pendek. Minimal 6 huruf.',
+  'error.credentials': 'Email atau kata sandinya salah.',
+  'error.too_many': 'Terlalu banyak percobaan. Tunggu sebentar.',
+  'error.unknown': 'Ada yang tidak beres. Coba lagi.',
+
   // ---------------------------------------------------------- app-level
   'splash.preparing': 'Menyiapkan rumah tangga kamu\u2026',
 
@@ -856,6 +878,28 @@ const Map<String, String> _en = {
   'chart.a11y': '{range} chart. {spent} spent of a {budget} budget.',
 
   'splash.preparing': 'Getting your household ready\u2026',
+
+  'error.permission_denied':
+      'Firebase refused this. Usually that means the security rules have not '
+          'been deployed \u2014 open the Rules tab in the Firebase Console, '
+          'paste in firebase/firestore.rules and Publish. If they are '
+          'deployed, then this really is not yours to change.',
+  'error.offline': 'Could not reach Firebase. Check your connection; anything '
+      'you saved will go out on its own once you are back.',
+  'error.signed_out': 'Your session expired. Sign in again.',
+  'error.not_found': 'That is not there any more. It may have just been '
+      'deleted.',
+  'error.already_exists': 'That already exists.',
+  'error.needs_index':
+      'Firestore needs an index for this query. The full error has a link '
+          'that creates it in one click.',
+  'error.quota': "Firebase's quota is used up for today. Try again tomorrow.",
+  'error.email_taken': 'That email is already in use.',
+  'error.email_invalid': 'That email does not look right.',
+  'error.password_weak': 'That password is too short. Six characters minimum.',
+  'error.credentials': 'That email or password is wrong.',
+  'error.too_many': 'Too many attempts. Wait a moment.',
+  'error.unknown': 'Something went wrong. Try again.',
 
   'app.cannot_reach': 'Could not reach your data',
   'app.setup_title': 'One setup step left',
