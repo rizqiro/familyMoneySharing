@@ -79,7 +79,8 @@ void main() {
   BudgetView view(String id, {double spent = 4760000}) => BudgetView(
         budget: budget(id),
         categories: const [],
-        spent: spent,
+        spending: spent,
+        income: 0,
         uncategorisedSpend: 0,
         transferredIn: 0,
         transferredOut: 0,

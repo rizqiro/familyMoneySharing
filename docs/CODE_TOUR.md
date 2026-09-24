@@ -414,6 +414,57 @@ memory, so they cost nothing. Year opens a separate Firestore listener
 
 ---
 
+## 8c. Money in, money out, and money moved
+
+Three rules decide every figure in the app. All three live in
+`lib/state/period_summary.dart`, and the tests for them are in
+`test/period_summary_test.dart`.
+
+**1. A ledger entry has a direction.** `Expense.kind` is `spending` or
+`income`. One collection, one set of queries, one screen - the direction is the
+only thing that differs, so it is one field rather than a second collection.
+
+The field is *nullable*, and that is deliberate. Before income existed, the
+only way to put money INTO a saving pot was to file an expense against it. So
+an entry with no `kind` means a deposit on a saving pot and an expense
+everywhere else, and `Expense.kindIn(saving:)` resolves it. Every entry written
+from now on sets the field; this only ever applies to old rows.
+
+That gives each budget two raw totals, `spending` and `income`, and two derived
+ones:
+
+| | monthly budget | saving pot |
+|---|---|---|
+| `available` | plan + income | the target |
+| `spent` (what the meter reads) | money out | paid in, less taken back out |
+| `remaining` | available − spent | target − saved |
+
+**2. Categories may not add up to more than the budget holds.** The cap is
+`BudgetView.headroomExcluding(categoryId)`, and the category editor both shows
+it live and refuses to save past it.
+
+Note what is *not* capped: spending. Going over a category's allocation is
+recorded exactly as it happened. The limit is on the plan, never on reality - a
+budget that refuses to record an overspend is just wrong.
+
+**3. An approved money request is a record, not two edits.** Approving flips
+one document's `status`; the transfer is applied when the month is added up.
+The approver controls the source budget but not the destination, so a design
+that edited both would need somebody to write a document they are not allowed
+to touch.
+
+When the source budget has nothing unallocated, the approver also names a
+category (`fromCategoryId`), and that category's allocation shrinks by the
+amount. Without it, granting from a fully carved budget would leave the
+categories adding up to more than the budget holds - exactly the state rule 2
+refuses to create.
+
+`PeriodSummary.transfers` carries the whole month's requests, decided and
+pending, which is what `TransferHistory` renders in both directions and all
+three outcomes.
+
+---
+
 ## 9. Recipes
 
 **Add a field to a budget.**
@@ -437,6 +488,11 @@ memory, so they cost nothing. Year opens a separate Firestore listener
 **Change a permission.** Edit `firebase/firestore.rules`, then
 `firebase deploy --only firestore:rules` - or paste it into the Rules tab in
 the console. Until you deploy, nothing changes.
+
+**Add a field that changes the money.** It goes in `PeriodSummary` as a getter,
+never in a screen. Two screens doing their own arithmetic is how they come to
+disagree, and a disagreement about money looks exactly like a working app.
+Then add a test to `test/period_summary_test.dart` - that file is the spec.
 
 **Add a chart.** Add a builder to `SpendSeries` in `state/chart_series.dart`,
 a painter in `core/widgets/spend_chart.dart`, and a provider that feeds one to

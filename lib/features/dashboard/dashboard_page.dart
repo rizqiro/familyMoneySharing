@@ -788,7 +788,10 @@ class _AccumulatedCard extends ConsumerWidget {
                   : 'dashboard.spent_of_both',
               {
                 'spent': money.format(summary.spent),
-                'planned': money.format(summary.planned),
+                // `available`, not `planned`: once income has been paid
+                // in, quoting the plan would not add up against the
+                // remaining figure beside it.
+                'planned': money.format(summary.available),
               },
             ),
             style: text.bodySmall?.copyWith(color: colors.inkSecondary),
@@ -944,6 +947,6 @@ String _summaryLine(AppText t, Money money, BudgetView view) {
   }
   return t(view.isOver ? 'dashboard.over_of' : 'dashboard.left_of', {
     'amount': money.format(view.remaining.abs()),
-    'planned': money.format(view.planned),
+    'planned': money.format(view.available),
   });
 }

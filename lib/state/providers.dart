@@ -300,14 +300,25 @@ final savingExpensesProvider = StreamProvider<List<Expense>>((ref) {
       .watchForBudgets(householdId, savingIds);
 });
 
-/// Approved transfers for the month - what moves money between the two members.
-final approvedTransfersProvider = StreamProvider<List<MoneyRequest>>((ref) {
+/// Every money request for the month, whatever its outcome.
+///
+/// One stream does two jobs: the approved ones move money between budgets when
+/// the month is added up, and the whole list - approved, declined and still
+/// open - is what the history screen shows. Two queries would have meant two
+/// listeners over the same handful of documents.
+final transfersProvider = StreamProvider<List<MoneyRequest>>((ref) {
   final householdId = ref.watch(householdIdProvider);
   if (householdId == null) return Stream.value(const []);
   final period = ref.watch(selectedPeriodProvider);
   return ref
       .watch(moneyRequestRepositoryProvider)
-      .watchApprovedForPeriod(householdId, period.key);
+      .watchAllForPeriod(householdId, period.key);
+});
+
+/// Just the approved ones, which are the only ones that moved any money.
+final approvedTransfersProvider = Provider<List<MoneyRequest>>((ref) {
+  final all = ref.watch(transfersProvider).valueOrNull ?? const [];
+  return all.where((t) => t.isApproved).toList();
 });
 
 /// The single object every screen reads its figures from.
@@ -327,8 +338,8 @@ final summaryProvider = Provider<PeriodSummary>((ref) {
     categories: ref.watch(categoriesProvider).valueOrNull ?? const [],
     periodExpenses: ref.watch(periodExpensesProvider).valueOrNull ?? const [],
     savingExpenses: ref.watch(savingExpensesProvider).valueOrNull ?? const [],
-    approvedTransfers:
-        ref.watch(approvedTransfersProvider).valueOrNull ?? const [],
+    approvedTransfers: ref.watch(approvedTransfersProvider),
+    allTransfers: ref.watch(transfersProvider).valueOrNull ?? const [],
   );
 });
 
@@ -422,7 +433,10 @@ final dashboardSeriesProvider = Provider<SpendSeries>((ref) {
 
   // With no budget of your own, the chart falls back to the household's
   // monthly budgets so the screen still has something honest to show.
-  final planned = focus?.planned ?? summary.planned;
+  // The chart's dashed ceiling is the money actually in the budget, so
+  // income raises the line rather than leaving the spending to climb
+  // toward a ceiling that has already moved.
+  final planned = focus?.available ?? summary.available;
   final savingIds = summary.savings.map((b) => b.budget.id).toSet();
 
   List<Expense> forThisBudget() {
@@ -482,7 +496,7 @@ final budgetSeriesProvider = Provider.family<SpendSeries, String>((ref, id) {
     period: summary.period,
     monthStartDay: household.monthStartDay,
     expenses: summary.expenses.where((e) => e.budgetId == id).toList(),
-    planned: view.planned,
+    planned: view.available,
   );
 });
 

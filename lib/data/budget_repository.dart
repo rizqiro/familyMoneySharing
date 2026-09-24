@@ -43,14 +43,55 @@ class BudgetRepository {
         });
   }
 
-  Future<String> create(String householdId, Budget budget) async {
+  /// Creates a budget, optionally with a set of empty categories already in it.
+  ///
+  /// [seedCategories] is how a saving pot arrives with Education / Emergency
+  /// fund / Other already set up. They are created with an allocation of zero
+  /// and already approved, deliberately:
+  ///
+  ///   * zero, because seeding them with money would be inventing a plan
+  ///     nobody agreed to; and
+  ///   * approved, because asking your partner to confirm an allocation of
+  ///     nothing is a notification that says nothing.
+  ///
+  /// The names are passed in rather than written here because they have to be
+  /// in the household's language, and a repository has no business knowing
+  /// which language that is.
+  ///
+  /// Everything goes in one batch, so a pot can never exist with only some of
+  /// its categories.
+  Future<String> create(
+    String householdId,
+    Budget budget, {
+    List<(String, String)> seedCategories = const [],
+  }) async {
     final ref = _refs.budgets(householdId).doc();
-    await ref.set({
+
+    final batch = db.batch();
+    batch.set(ref, {
       ...budget.toJson(),
       'periodKey': periodKeyFor(budget),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    for (final (emoji, name) in seedCategories) {
+      batch.set(_refs.categories(householdId).doc(), {
+        'budgetId': ref.id,
+        'name': name,
+        'emoji': emoji,
+        'allocated': 0.0,
+        'status': 'approved',
+        'createdBy': budget.createdBy,
+        'confirmedBy': '',
+        'decisionNote': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'decidedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
     return ref.id;
   }
 

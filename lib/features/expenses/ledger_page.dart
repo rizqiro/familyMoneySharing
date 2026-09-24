@@ -51,7 +51,23 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
     // time.
     final editableBudgetIds =
         summary.spendable.map((b) => b.budget.id).toSet();
-    final total = expenses.fold(0.0, (sum, e) => sum + e.amount);
+    // Spending and income are totalled apart. Netting them would produce a
+    // single figure that is neither "what we spent" nor "what came in", and
+    // answers no question anybody has.
+    final savingIds = ref
+        .watch(summaryProvider)
+        .savings
+        .map((v) => v.budget.id)
+        .toSet();
+    bool isIncome(Expense e) =>
+        e.kindIn(saving: savingIds.contains(e.budgetId)) == EntryKind.income;
+
+    final total = expenses
+        .where((e) => !isIncome(e))
+        .fold(0.0, (sum, e) => sum + e.amount);
+    final incomeTotal = expenses
+        .where(isIncome)
+        .fold(0.0, (sum, e) => sum + e.amount);
     final grouped = _groupByDay(expenses);
 
     return Scaffold(
@@ -109,6 +125,16 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                     style: text.bodySmall?.copyWith(color: colors.inkMuted),
                   ),
                   const Spacer(),
+                  if (incomeTotal > 0) ...[
+                    Text(
+                      '+ ${money.format(incomeTotal)}',
+                      style: text.bodyMedium?.copyWith(
+                        color: colors.positive,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: Insets.md),
+                  ],
                   Text(
                     money.format(total),
                     style: text.titleMedium,
@@ -156,7 +182,9 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                                     const Spacer(),
                                     Text(
                                       money.format(
-                                        day.$2.fold(
+                                        day.$2
+                                            .where((e) => !isIncome(e))
+                                            .fold(
                                           0.0,
                                           (sum, e) => sum + e.amount,
                                         ),

@@ -44,6 +44,14 @@ class ExpenseTile extends ConsumerWidget {
         : (household?.displayNameOf(expense.spentBy) ??
             t('common.partner'));
 
+    // Which way this entry went. A row filed against a saving pot before
+    // income existed means a deposit - see `Expense.kind`.
+    final saving = ref
+        .watch(summaryProvider)
+        .savings
+        .any((v) => v.budget.id == expense.budgetId);
+    final income = expense.kindIn(saving: saving) == EntryKind.income;
+
     final subtitle = [
       spender,
       if (category != null) category.name,
@@ -100,9 +108,14 @@ class ExpenseTile extends ConsumerWidget {
             ),
             const SizedBox(width: Insets.sm),
             Text(
-              money.format(expense.amount),
+              // Income carries a sign and a colour; spending is the plain
+              // default, because most rows are spending and a ledger where
+              // every line is decorated is a ledger you stop reading.
+              income ? '+ ${money.format(expense.amount)}'
+                     : money.format(expense.amount),
               style: text.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w600,
+                color: income ? colors.positive : colors.ink,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),

@@ -8,6 +8,7 @@ import '../../core/widgets/common.dart';
 import '../../core/widgets/meter.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../core/widgets/spend_chart.dart';
+import '../../models/expense.dart';
 import '../../models/household.dart';
 import '../../models/spend_category.dart';
 import '../../state/chart_series.dart';
@@ -15,6 +16,7 @@ import '../../state/period_summary.dart';
 import '../../state/providers.dart';
 import '../expenses/expense_editor.dart';
 import '../expenses/expense_tile.dart';
+import '../money/transfer_history.dart';
 import 'budget_editor.dart';
 import 'category_editor.dart';
 
@@ -194,6 +196,16 @@ class BudgetDetailPage extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+            ],
+
+            if (summary.transfersFor(budgetId).any((r) => !r.isPending)) ...[
+              const SizedBox(height: Insets.xl),
+              SectionHeader(title: t('history.on_this_budget')),
+              TransferHistory(
+                requests: summary.transfersFor(budgetId),
+                budgetId: budgetId,
+                limit: 5,
               ),
             ],
 
@@ -477,12 +489,78 @@ class _SpentSection extends ConsumerWidget {
             ),
             Expanded(
               child: Stat(
-                label: t('detail.unallocated'),
-                value: money.format(view.unallocated),
+                // On a saving pot the third figure is what has been taken back
+                // out, which is the one number the meter cannot show: a pot at
+                // 2 jt looks the same whether nothing was withdrawn or a lot
+                // was paid in and half taken back.
+                label: saving ? t('detail.taken_out') : t('detail.unallocated'),
+                value: money.format(
+                  saving ? view.spending : view.unallocated,
+                ),
               ),
             ),
           ],
         ),
+
+        if (!saving && view.income > 0) ...[
+          const SizedBox(height: Insets.lg),
+          Row(
+            children: [
+              Icon(Icons.arrow_downward, size: 15, color: colors.positive),
+              const SizedBox(width: Insets.sm),
+              Expanded(
+                child: Text(
+                  t('detail.income_added', {
+                    'amount': money.format(view.income),
+                  }),
+                  style: text.bodySmall?.copyWith(color: colors.inkSecondary),
+                ),
+              ),
+            ],
+          ),
+        ],
+
+        if (isController) ...[
+          const SizedBox(height: Insets.lg),
+          // Recording money straight from the budget it belongs to, rather
+          // than from the global add button and then picking the budget again.
+          // For a saving pot this is the whole point: paying in is income, and
+          // it used to be reachable only by filing a fake expense.
+          Row(
+            children: [
+              Expanded(
+                child: _RecordButton(
+                  label: t(saving
+                      ? 'detail.record_deposit'
+                      : 'detail.record_income',),
+                  icon: Icons.arrow_downward,
+                  tone: colors.positive,
+                  onTap: () => showExpenseEditor(
+                    context,
+                    budgetId: view.budget.id,
+                    kind: EntryKind.income,
+                  ),
+                ),
+              ),
+              const SizedBox(width: Insets.md),
+              Expanded(
+                child: _RecordButton(
+                  label: t(saving
+                      ? 'detail.record_withdrawal'
+                      : 'detail.record_spending',),
+                  icon: Icons.arrow_outward,
+                  tone: colors.accent,
+                  onTap: () => showExpenseEditor(
+                    context,
+                    budgetId: view.budget.id,
+                    kind: EntryKind.spending,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+
         const SizedBox(height: Insets.lg),
         Row(
           children: [
@@ -812,6 +890,46 @@ class _CategoryCard extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// One of the two "record something" buttons on a budget.
+///
+/// An outlined button with the tone carried by the icon and the border rather
+/// than a fill: two filled buttons side by side would both shout, and neither
+/// of these is the primary action on the screen.
+class _RecordButton extends StatelessWidget {
+  const _RecordButton({
+    required this.label,
+    required this.icon,
+    required this.tone,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color tone;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 17, color: tone),
+      label: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        // The theme's default is a full-width 54px button; these two share a
+        // row, so they shrink to their labels.
+        minimumSize: const Size(0, 46),
+        padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+        side: BorderSide(color: tone.withValues(alpha: 0.4)),
+        textStyle: Theme.of(context).textTheme.labelMedium,
       ),
     );
   }

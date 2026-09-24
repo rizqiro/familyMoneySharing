@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../models/budget.dart';
+import '../../models/spend_category.dart';
 import '../../state/providers.dart';
 
 /// Create or edit a budget, including who controls it.
@@ -120,6 +121,16 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
             createdBy: uid,
             createdAt: null,
           ),
+          // A new saving pot arrives with the three categories almost every
+          // pot needs, at zero each. Naming a pot and then staring at an empty
+          // one is the moment people give up; three sensible headings is a
+          // better start than a blank page.
+          //
+          // The names go through `t` here because a repository has no business
+          // knowing which language the household reads.
+          seedCategories: _kind == BudgetKind.saving
+              ? SpendCategory.savingSeeds(ref.read(textProvider))
+              : const [],
         );
         if (mounted) Navigator.of(context).pop(id);
       }

@@ -120,7 +120,7 @@ class BudgetMiniCard extends ConsumerWidget {
                   saving
                       ? t('dashboard.target_of',
                           {'amount': money.compact(view.planned)},)
-                      : '${t('common.of')} ${money.format(view.planned)}',
+                      : '${t('common.of')} ${money.format(view.available)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: text.bodySmall
@@ -237,7 +237,7 @@ class BudgetTile extends ConsumerWidget {
                         saving
                             ? t('dashboard.target_of',
                                 {'amount': money.compact(view.planned)},)
-                            : '${t('common.of')} ${money.format(view.planned)}',
+                            : '${t('common.of')} ${money.format(view.available)}',
                         style: text.bodySmall?.copyWith(
                           fontSize: 12,
                           color: colors.inkSecondary,

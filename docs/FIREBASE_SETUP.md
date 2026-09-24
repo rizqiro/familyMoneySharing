@@ -237,6 +237,21 @@ pots, so one query per month picks up both.
 **`permission-denied` everywhere**
 The rules were never deployed. Run the `firebase deploy` command in step 6.
 
+**After pulling new code, redeploy the rules**
+`firebase/firestore.rules` changes whenever a feature needs a new permission,
+and the console copy does not follow along. Recent changes:
+
+| Feature | What the rules gained | Breaks without it? |
+|---|---|---|
+| Asking your partner for money | the whole `moneyRequests` block | Yes - asking is refused |
+| Naming the category a transfer comes out of | `fromCategoryId`, `fromCategoryName` on the decision | **Yes - every approve and decline is refused** |
+| Income | `kind` must be `spending` or `income` | No - it only tightens an existing rule |
+
+The middle one is worth understanding, because it is the trap: approving a
+request now always writes those two extra fields, and the old rule allows
+exactly three keys and no more. So on a stale copy of the rules, tapping
+"Send money" fails - even though asking worked a moment earlier.
+
 **`permission-denied` on ONE thing, when everything else works**
 The rules ARE deployed, but an older copy of them. Every time
 `firebase/firestore.rules` changes in the repo, the copy in the console has to

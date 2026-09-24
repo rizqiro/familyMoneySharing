@@ -6,9 +6,12 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/soft_card.dart';
+import '../../core/format/money.dart';
 import '../../models/approval.dart';
 import '../../models/money_request.dart';
+import '../../state/period_summary.dart';
 import '../../state/providers.dart';
+import '../money/transfer_history.dart';
 
 /// Where decisions get made. Two kinds of item land here:
 ///
@@ -41,11 +44,20 @@ class InboxPage extends ConsumerWidget {
         sentApprovals.isEmpty &&
         sentMoney.isEmpty;
 
+    // Every decided request this month, both directions. Kept out of the
+    // "nothing waiting" test on purpose: an empty inbox with a month of history
+    // under it is not an empty screen.
+    final history = ref
+        .watch(summaryProvider)
+        .transfers
+        .where((r) => !r.isPending)
+        .toList();
+
     return Scaffold(
       appBar: AppBar(title: Text(t('inbox.title'))),
       body: SafeArea(
         top: false,
-        child: nothingWaiting
+        child: nothingWaiting && history.isEmpty
             ? EmptyState(
                 icon: Icons.check_circle_outline,
                 title: t('inbox.empty'),
@@ -61,6 +73,13 @@ class InboxPage extends ConsumerWidget {
                   120,
                 ),
                 children: [
+                  if (nothingWaiting)
+                    EmptyState(
+                      icon: Icons.check_circle_outline,
+                      compact: true,
+                      title: t('inbox.empty'),
+                      message: t('inbox.empty_blurb'),
+                    ),
                   if (moneyIn.isNotEmpty || approvals.isNotEmpty) ...[
                     SectionHeader(title: t('inbox.waiting_on_you')),
                     // Money first: it is blocking someone from spending, which
@@ -90,6 +109,12 @@ class InboxPage extends ConsumerWidget {
                         child: _SentAllocationCard(approval: approval),
                       ),
                   ],
+                  if (history.isNotEmpty) ...[
+                    const SizedBox(height: Insets.xl),
+                    SectionHeader(title: t('history.title')),
+                    TransferHistory(requests: history),
+                  ],
+
                   const SizedBox(height: Insets.lg),
                   Text(
                     t('inbox.note'),
@@ -134,6 +159,30 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
       note = reason;
     }
 
+    // =========================================================================
+    // WHERE THE MONEY COMES FROM
+    // =========================================================================
+    // A budget with money still unallocated can grant a request out of that
+    // slack and nothing else changes. A budget whose every rupiah is already
+    // carved into categories cannot: granting it anyway would leave the
+    // categories adding up to more than the budget holds - the exact state the
+    // category editor refuses to create.
+    //
+    // So when the slack is too small, the approver names the category it comes
+    // out of, and that category's allocation shrinks by the amount.
+    var fromCategoryId = '';
+    var fromCategoryName = '';
+    if (approved) {
+      final source = _sourceView();
+      final short = source != null && source.unallocated < widget.request.amount;
+      if (short) {
+        final picked = await _askSourceCategory(source);
+        if (picked == null) return;
+        fromCategoryId = picked.category.id;
+        fromCategoryName = picked.category.name;
+      }
+    }
+
     setState(() => _busy = true);
     try {
       await ref.read(moneyRequestRepositoryProvider).decide(
@@ -141,6 +190,8 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
             request: widget.request,
             approved: approved,
             note: note,
+            fromCategoryId: fromCategoryId,
+            fromCategoryName: fromCategoryName,
           );
       if (mounted) {
         final t = ref.read(textProvider);
@@ -152,6 +203,90 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// The source budget as the month sees it, or null if it has gone.
+  BudgetView? _sourceView() {
+    final matches = ref
+        .read(summaryProvider)
+        .monthly
+        .where((b) => b.budget.id == widget.request.fromBudgetId);
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  /// Asks which category to take the money out of.
+  ///
+  /// Categories that do not hold enough are listed but cannot be chosen -
+  /// hiding them would leave you staring at a short list wondering where the
+  /// rest went, and the amount each one holds is exactly what you need to see
+  /// to make the choice.
+  Future<CategoryView?> _askSourceCategory(BudgetView source) async {
+    final t = ref.read(textProvider);
+    final money = ref.read(moneyProvider);
+    final amount = widget.request.amount;
+    final candidates =
+        source.categories.where((c) => c.allocated > 0).toList();
+
+    if (candidates.isEmpty) {
+      showToast(context, t('inbox.no_categories_to_take_from'));
+      return null;
+    }
+
+    return showModalBottomSheet<CategoryView>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(Insets.page),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t('inbox.take_from_title'),
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+              const SizedBox(height: Insets.xs),
+              Text(
+                t('inbox.take_from_blurb', {
+                  'amount': money.format(amount),
+                  'budget': source.budget.name,
+                }),
+                style: Theme.of(sheetContext)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: sheetContext.colors.inkSecondary),
+              ),
+              const SizedBox(height: Insets.lg),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      for (final c in candidates)
+                        _SourceCategoryRow(
+                          view: c,
+                          money: money,
+                          enough: c.allocated >= amount,
+                          shortfallLabel: t('inbox.only_has', {
+                            'amount': money.format(c.allocated),
+                          }),
+                          onTap: () =>
+                              Navigator.of(sheetContext).pop(c),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: Insets.md),
+              OutlinedButton(
+                onPressed: () => Navigator.of(sheetContext).pop(),
+                child: Text(t('common.cancel')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -171,6 +306,11 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
     final remaining = sources.isEmpty ? null : sources.first.remaining;
     final afterwards = remaining == null ? null : remaining - request.amount;
     final tooMuch = afterwards != null && afterwards < 0;
+
+    // Nothing spare means the money has to come out of a named category, and
+    // the sheet will ask which one.
+    final needsCategory =
+        sources.isNotEmpty && sources.first.unallocated < request.amount;
 
     return SoftCard(
       child: Column(
@@ -238,6 +378,28 @@ class _MoneyRequestCardState extends ConsumerState<_MoneyRequestCard> {
             Text(
               t('inbox.would_go_over', {'budget': request.fromBudgetName}),
               style: text.bodySmall?.copyWith(color: colors.negative),
+            ),
+          ],
+
+          // Said before the button rather than after it, so agreeing does not
+          // spring an unexpected second question.
+          if (!tooMuch && needsCategory) ...[
+            const SizedBox(height: Insets.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.call_split, size: 15, color: colors.inkSecondary),
+                const SizedBox(width: Insets.sm),
+                Expanded(
+                  child: Text(
+                    t('inbox.all_allocated', {
+                      'budget': request.fromBudgetName,
+                    }),
+                    style:
+                        text.bodySmall?.copyWith(color: colors.inkSecondary),
+                  ),
+                ),
+              ],
             ),
           ],
 
@@ -556,4 +718,55 @@ Future<String?> _askReason(BuildContext context, AppText t) {
       ],
     ),
   );
+}
+
+/// One row in the "which category does this come out of?" sheet.
+///
+/// A category that cannot cover the amount is shown greyed with what it does
+/// hold, rather than hidden. Hiding it would raise the question the row
+/// answers: "where did Groceries go?"
+class _SourceCategoryRow extends StatelessWidget {
+  const _SourceCategoryRow({
+    required this.view,
+    required this.money,
+    required this.enough,
+    required this.shortfallLabel,
+    required this.onTap,
+  });
+
+  final CategoryView view;
+  final Money money;
+  final bool enough;
+  final String shortfallLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+
+    return Opacity(
+      opacity: enough ? 1 : 0.45,
+      child: ListTile(
+        // A null onTap is what makes a ListTile unselectable, and it greys the
+        // ripple too - no need to fake a disabled state.
+        onTap: enough ? onTap : null,
+        contentPadding: EdgeInsets.zero,
+        leading: Text(
+          view.category.emoji,
+          style: const TextStyle(fontSize: 20),
+        ),
+        title: Text(view.category.name, style: text.bodyLarge),
+        subtitle: Text(
+          enough
+              ? money.format(view.allocated)
+              : shortfallLabel,
+          style: text.bodySmall?.copyWith(color: colors.inkSecondary),
+        ),
+        trailing: enough
+            ? Icon(Icons.chevron_right, size: 20, color: colors.inkMuted)
+            : null,
+      ),
+    );
+  }
 }

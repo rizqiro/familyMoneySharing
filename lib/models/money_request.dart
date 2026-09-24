@@ -44,6 +44,8 @@ class MoneyRequest {
     required this.fromBudgetName,
     required this.toBudgetId,
     required this.toBudgetName,
+    this.fromCategoryId = '',
+    this.fromCategoryName = '',
     required this.amount,
     required this.reason,
     required this.period,
@@ -71,6 +73,26 @@ class MoneyRequest {
   final String toBudgetId;
   final String toBudgetName;
 
+  /// Which category of the source budget the money was taken out of, chosen by
+  /// the approver - or empty when it came out of the budget's unallocated
+  /// slack.
+  ///
+  /// =============================================================================
+  /// WHY THE APPROVER PICKS A CATEGORY AND NOT THE ASKER
+  /// =============================================================================
+  /// The asker has no business deciding which of someone else's categories
+  /// gets raided - they may not even agree it is the right one. But somebody
+  /// has to decide, because a budget with every rupiah already carved into
+  /// categories has nothing spare: granting the request out of thin air would
+  /// quietly leave the categories adding up to more than the budget holds.
+  ///
+  /// So the choice is made at the moment of approval, by the one person who
+  /// knows what the budget is for. It is only demanded when the slack is too
+  /// small; with money still unallocated, that is where it comes from and
+  /// these stay empty.
+  final String fromCategoryId;
+  final String fromCategoryName;
+
   final double amount;
 
   /// Free text: "school shoes", "petrol this week".
@@ -94,6 +116,13 @@ class MoneyRequest {
 
   bool get isPending => status == AllocationStatus.pending;
   bool get isApproved => status == AllocationStatus.approved;
+  bool get isRejected => status == AllocationStatus.rejected;
+
+  /// True when the approver named a category to take the money from.
+  bool get hasSourceCategory => fromCategoryId.isNotEmpty;
+
+  /// Was this request made by [uid]?
+  bool wasAskedBy(String? uid) => uid != null && requestedBy == uid;
 
   /// Builds an instance from a Firestore document.
   ///
@@ -109,6 +138,8 @@ class MoneyRequest {
       fromBudgetName: (data['fromBudgetName'] as String?) ?? 'their budget',
       toBudgetId: (data['toBudgetId'] as String?) ?? '',
       toBudgetName: (data['toBudgetName'] as String?) ?? 'your budget',
+      fromCategoryId: (data['fromCategoryId'] as String?) ?? '',
+      fromCategoryName: (data['fromCategoryName'] as String?) ?? '',
       // Firestore returns whole numbers as int and decimals as double. `num` is
       // the shared supertype of both, so this reads either without crashing.
       amount: (data['amount'] as num?)?.toDouble() ?? 0,

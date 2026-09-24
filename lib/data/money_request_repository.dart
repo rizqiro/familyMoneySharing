@@ -57,6 +57,26 @@ class MoneyRequestRepository {
         .map((snap) => snap.docs.map(MoneyRequest.fromDoc).toList());
   }
 
+  /// Every request from one month, whatever its outcome - the history screen.
+  ///
+  /// Deliberately not filtered by status or by member: the history shows both
+  /// directions and all three outcomes, including the ones that were turned
+  /// down. A refusal is part of the record - it is the answer to "what
+  /// happened to the money I asked for".
+  Stream<List<MoneyRequest>> watchAllForPeriod(
+    String householdId,
+    String period,
+  ) {
+    return _refs
+        .moneyRequests(householdId)
+        .where('period', isEqualTo: period)
+        .snapshots()
+        .map(
+          (snap) => snap.docs.map(MoneyRequest.fromDoc).toList()
+            ..sort(_newestFirst),
+        );
+  }
+
   /// Requests waiting for [uid] to decide - their inbox.
   Stream<List<MoneyRequest>> watchInbox(String householdId, String uid) {
     return _refs
@@ -106,11 +126,17 @@ class MoneyRequestRepository {
   ///
   /// Only three fields change; the security rules enforce exactly that, so a
   /// buggy or modified client cannot also rewrite the amount while approving.
+  /// [fromCategoryId] names the category the money comes out of. It is needed
+  /// only when the source budget has no unallocated slack left; see
+  /// [MoneyRequest.fromCategoryId] for why the approver chooses it and not the
+  /// asker.
   Future<void> decide({
     required String householdId,
     required MoneyRequest request,
     required bool approved,
     String note = '',
+    String fromCategoryId = '',
+    String fromCategoryName = '',
   }) {
     return _refs.moneyRequest(householdId, request.id).update({
       'status':
@@ -118,6 +144,10 @@ class MoneyRequestRepository {
               .name,
       'decisionNote': note.trim(),
       'decidedAt': FieldValue.serverTimestamp(),
+      // Written even when empty, so declining clears a category picked during
+      // an earlier attempt rather than leaving a stale one on the record.
+      'fromCategoryId': approved ? fromCategoryId : '',
+      'fromCategoryName': approved ? fromCategoryName : '',
     });
   }
 
