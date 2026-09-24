@@ -157,6 +157,10 @@ service cloud.firestore {
       // Ownership of the budget, not authorship of the entry, is what grants
       // edit rights. That is also what lets a controller deleting a category
       // detach entries underneath it.
+      // `kind` is 'spending' or 'income'. It is checked here so a bad value
+      // cannot land in the ledger and be read as the opposite direction: an
+      // entry with an unrecognised kind falls back to spending on the client,
+      // which for a saving pot would silently reverse it.
       match /expenses/{eid} {
         allow read: if isMember(hid);
 
@@ -164,13 +168,15 @@ service cloud.firestore {
                       && request.resource.data.spentBy == uid()
                       && controlsBudget(hid, request.resource.data.budgetId)
                       && request.resource.data.amount is number
-                      && request.resource.data.amount > 0;
+                      && request.resource.data.amount > 0
+                      && request.resource.data.kind in ['spending', 'income'];
 
         // Both budgets are checked so an entry cannot be moved into a budget
         // the editor does not control.
         allow update: if isMember(hid)
                       && controlsBudget(hid, resource.data.budgetId)
-                      && controlsBudget(hid, request.resource.data.budgetId);
+                      && controlsBudget(hid, request.resource.data.budgetId)
+                      && request.resource.data.kind in ['spending', 'income'];
 
         allow delete: if isMember(hid)
                       && controlsBudget(hid, resource.data.budgetId);
@@ -200,10 +206,17 @@ service cloud.firestore {
 
         // Only the source budget's controller decides, and only by writing the
         // decision - the amount cannot be edited while approving.
+        //
+        // `fromCategoryId` is part of the decision: with no unallocated money
+        // left, the approver has to name the category it comes out of. It is
+        // writable here and nowhere else, so the asker cannot preselect which
+        // of someone else's categories to raid.
         allow update: if isMember(hid)
                       && controlsBudget(hid, resource.data.fromBudgetId)
-                      && changed().hasOnly(
-                           ['status', 'decisionNote', 'decidedAt']);
+                      && changed().hasOnly([
+                           'status', 'decisionNote', 'decidedAt',
+                           'fromCategoryId', 'fromCategoryName'
+                         ]);
 
         // Withdrawing an unanswered request. Safe to delete outright: unlike a
         // category allocation it leaves nothing half-finished behind.

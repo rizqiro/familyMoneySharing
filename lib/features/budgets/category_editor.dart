@@ -8,10 +8,24 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../models/budget.dart';
 import '../../models/spend_category.dart';
+import '../../state/period_summary.dart';
 import '../../state/providers.dart';
 
 /// Create or edit a category inside a budget. Only the budget's controller
 /// reaches this sheet; the other member confirms the result from their inbox.
+///
+/// =============================================================================
+/// THE ONE HARD LIMIT: CATEGORIES CANNOT ADD UP TO MORE THAN THE BUDGET
+/// =============================================================================
+/// Carving a budget into categories is planning, and a plan that allocates more
+/// money than exists is not a plan. So the amount here is capped at whatever is
+/// left unallocated, and the sheet says what that figure is before you start
+/// typing rather than rejecting you afterwards.
+///
+/// SPENDING more than a category holds is a different matter and stays
+/// allowed. Real life overshoots; the budget's job is to tell you by how much,
+/// not to refuse to record it. The limit is on the plan, never on what
+/// actually happened.
 Future<void> showCategoryEditor(
   BuildContext context, {
   required Budget budget,
@@ -51,6 +65,18 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
 
   bool get _isEdit => widget.existing != null;
 
+  /// This budget as the month sees it - allocations, transfers and all.
+  ///
+  /// Null while the summary is still loading, in which case the cap is not
+  /// applied: better to let a category through and show the over-allocation
+  /// warning afterwards than to block on data that has not arrived.
+  BudgetView? _budgetView() {
+    final all = ref.read(summaryProvider);
+    final matches = [...all.monthly, ...all.savings]
+        .where((v) => v.budget.id == widget.budget.id);
+    return matches.isEmpty ? null : matches.first;
+  }
+
   @override
   void dispose() {
     _name.dispose();
@@ -76,6 +102,25 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
       setState(
           () => _error = ref.read(textProvider)('category_editor.err_amount'),);
       return;
+    }
+
+    // The cap. `headroomExcluding` leaves out the category being edited, so
+    // raising one from 300k to 400k is measured against the other categories
+    // rather than against itself.
+    final view = _budgetView();
+    if (view != null) {
+      final headroom = view.headroomExcluding(widget.existing?.id);
+      if (amount > headroom) {
+        final money = ref.read(moneyProvider);
+        setState(
+          () => _error = ref.read(textProvider)('category_editor.err_over', {
+            'over': money.format(amount - headroom),
+            'headroom': money.format(headroom),
+            'budget': widget.budget.name,
+          }),
+        );
+        return;
+      }
     }
 
     setState(() {
@@ -213,7 +258,12 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
                 hintText: '0',
                 prefixText: '${money.symbol} ',
               ),
+              // Rebuilds the line below on every keystroke, so the headroom
+              // counts down as you type instead of only being checked on save.
+              onChanged: (_) => setState(() {}),
             ),
+            const SizedBox(height: Insets.sm),
+            _Headroom(budget: widget.budget, existingId: widget.existing?.id),
 
             if (partner != null) ...[
               const SizedBox(height: Insets.lg),
@@ -331,6 +381,61 @@ class _EmojiButton extends StatelessWidget {
         ),
         child: Text(emoji, style: const TextStyle(fontSize: 24)),
       ),
+    );
+  }
+}
+
+/// "Rp 600.000 of Rp 8.000.000 still unallocated."
+///
+/// A live figure rather than an error after the fact. Someone who can see the
+/// headroom while typing does not hit the cap; someone who only finds out on
+/// save has to work out what to change.
+class _Headroom extends ConsumerWidget {
+  const _Headroom({required this.budget, required this.existingId});
+
+  final Budget budget;
+
+  /// The category being edited, left out of the sum - its own allocation is
+  /// not competition for itself.
+  final String? existingId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final t = ref.watch(textProvider);
+    final money = ref.watch(moneyProvider);
+    final summary = ref.watch(summaryProvider);
+
+    final matches = [...summary.monthly, ...summary.savings]
+        .where((v) => v.budget.id == budget.id);
+    if (matches.isEmpty) return const SizedBox.shrink();
+
+    final view = matches.first;
+    final headroom = view.headroomExcluding(existingId);
+    final none = headroom <= 0;
+
+    return Row(
+      children: [
+        Icon(
+          none ? Icons.error_outline : Icons.pie_chart_outline,
+          size: 15,
+          color: none ? colors.accentDeep : colors.inkMuted,
+        ),
+        const SizedBox(width: Insets.sm),
+        Expanded(
+          child: Text(
+            none
+                ? t('category_editor.none_left')
+                : t('category_editor.headroom', {
+                    'amount': money.format(headroom),
+                    'total': money.format(view.available),
+                  }),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: none ? colors.accentDeep : colors.inkMuted,
+                ),
+          ),
+        ),
+      ],
     );
   }
 }

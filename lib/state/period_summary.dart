@@ -22,15 +22,47 @@ import '../models/spend_category.dart';
 /// Nothing here touches Firestore or Flutter. That means you can reason about
 /// it - and test it - without a database or a screen.
 
-/// One category with its spending resolved.
+/// One category with its money resolved.
 class CategoryView {
-  const CategoryView({required this.category, required this.spent});
+  const CategoryView({
+    required this.category,
+    required this.spending,
+    required this.income,
+    required this.transferredOut,
+    required this.saving,
+  });
 
   final SpendCategory category;
-  final double spent;
 
-  double get allocated => category.countableAmount;
+  /// Raw totals for this category, kept apart rather than netted off, because
+  /// "spent 500, took 200 back" and "spent 300" are different stories.
+  final double spending;
+  final double income;
+
+  /// Money granted away out of this category by an approved request.
+  ///
+  /// Subtracted from the allocation rather than added to the spending: the
+  /// money never was spent here, it left the category entirely. Treating it as
+  /// spending would make the category look overspent and the budget look fine,
+  /// which is exactly backwards.
+  final double transferredOut;
+
+  /// Whether the parent budget is a saving pot, which flips what "used" means.
+  final bool saving;
+
+  /// What this category may use, after anything granted away.
+  double get allocated =>
+      (category.countableAmount - transferredOut).clamp(0.0, double.infinity);
+
+  /// The figure the category's bar measures: money out for a monthly budget,
+  /// money in for a saving pot.
+  double get spent => saving ? income - spending : spending;
+
   double get remaining => allocated - spent;
+
+  /// Going over a category's allocation is allowed - the restriction is on
+  /// PLANNING more than the budget holds, not on what actually happens. This
+  /// is how that overspend is surfaced.
   bool get isOver => allocated > 0 && spent > allocated;
 
   /// 0..1, for the progress bar.
@@ -44,12 +76,13 @@ class CategoryView {
   }
 }
 
-/// One budget with its categories, spending and transfers resolved.
+/// One budget with its categories, money and transfers resolved.
 class BudgetView {
   const BudgetView({
     required this.budget,
     required this.categories,
-    required this.spent,
+    required this.spending,
+    required this.income,
     required this.uncategorisedSpend,
     required this.transferredIn,
     required this.transferredOut,
@@ -57,10 +90,16 @@ class BudgetView {
 
   final Budget budget;
   final List<CategoryView> categories;
-  final double spent;
+
+  /// Money that left this budget, and money that arrived in it, as raw totals.
+  ///
+  /// For a monthly budget: what you spent, and any extra money paid into it.
+  /// For a saving pot: what you took out, and what you put in.
+  final double spending;
+  final double income;
 
   /// Spending filed against this budget but under no category - what is left
-  /// behind when a category is deleted. The expenses survive; their label does
+  /// behind when a category is deleted. The entries survive; their label does
   /// not.
   final double uncategorisedSpend;
 
@@ -70,7 +109,9 @@ class BudgetView {
   /// Money granted away from this budget to the other member.
   final double transferredOut;
 
-  /// What may actually be spent this month.
+  bool get isSaving => budget.isSaving;
+
+  /// What was planned: the budget as set, plus and minus approved transfers.
   ///
   /// THIS is where an approved money request takes effect. Neither budget
   /// document was edited when the request was approved - the adjustment happens
@@ -87,28 +128,61 @@ class BudgetView {
 
   bool get hasTransfers => transferredIn > 0 || transferredOut > 0;
 
-  /// The total carved into categories.
+  /// The money actually available.
+  ///
+  /// For a monthly budget, income raises the ceiling: money paid in is money
+  /// you may now spend. For a saving pot the ceiling is the target, which
+  /// income moves you TOWARD rather than raising.
+  double get available => isSaving ? planned : planned + income;
+
+  /// The figure this budget's meter measures.
+  ///
+  /// Monthly: what has gone out. Saving: what is in the pot, which is what has
+  /// been paid in less anything taken back out.
+  double get spent => isSaving ? income - spending : spending;
+
+  /// The total carved into categories, after anything granted away out of one.
   ///
   /// `fold` walks the list carrying a running value: start at 0.0, and for each
   /// category add its allocation. It is Dart's version of "sum these up".
   double get allocated => categories.fold(0.0, (sum, c) => sum + c.allocated);
 
-  /// Budget money not yet assigned to any category.
-  double get unallocated => (planned - allocated).clamp(0.0, double.infinity);
+  /// Budget money not yet assigned to any category. This is the slack a money
+  /// request is granted out of before any category has to be touched.
+  double get unallocated => (available - allocated).clamp(0.0, double.infinity);
 
-  double get remaining => planned - spent;
-  bool get isOver => planned > 0 && spent > planned;
+  /// How much may still be allocated, ignoring one category.
+  ///
+  /// The category editor asks this when checking a new amount: "if this
+  /// category did not exist, how much of the budget would be unspoken for?"
+  /// Passing the id of the category being edited is what lets you raise it from
+  /// 300k to 400k without its own 300k counting against the headroom.
+  double headroomExcluding(String? categoryId) {
+    final others = categories
+        .where((c) => c.category.id != categoryId)
+        .fold(0.0, (sum, c) => sum + c.allocated);
+    return (available - others).clamp(0.0, double.infinity);
+  }
 
-  /// The categories add up to more than the budget holds - a planning mistake
-  /// worth surfacing before it becomes an overspend.
-  bool get isOverAllocated => planned > 0 && allocated > planned;
+  double get remaining => available - spent;
+
+  /// A saving pot cannot be "over" - passing the target is the good outcome.
+  bool get isOver => !isSaving && available > 0 && spent > available;
+
+  /// The categories add up to more than the budget holds.
+  ///
+  /// Creating that state is blocked in the category editor, but it can still
+  /// arise afterwards: granting money away, or lowering the budget, shrinks
+  /// what is available underneath allocations that were fine when they were
+  /// made. So it is still worth surfacing.
+  bool get isOverAllocated => available > 0 && allocated > available;
 
   /// How many allocations are still waiting on the other member.
   int get pendingCount => categories.where((c) => c.category.isPending).length;
 
   double get progress {
-    if (planned <= 0) return spent > 0 ? 1 : 0;
-    return (spent / planned).clamp(0.0, 1.0);
+    if (available <= 0) return spent > 0 ? 1 : 0;
+    return (spent / available).clamp(0.0, 1.0);
   }
 
   bool isControlledBy(String? uid) => uid != null && budget.controllerId == uid;
@@ -124,6 +198,7 @@ class PeriodSummary {
     required this.savings,
     required this.expenses,
     required this.spendByMember,
+    required this.transfers,
   });
 
   final Period period;
@@ -140,8 +215,16 @@ class PeriodSummary {
   /// is the point of the app.
   final List<Expense> expenses;
 
-  /// uid -> total spent this month.
+  /// uid -> total spent this month. Income is left out: money arriving is not
+  /// somebody's share of the spending.
   final Map<String, double> spendByMember;
+
+  /// Every money request decided or still open this month, newest first.
+  ///
+  /// The history screen reads this. Requests are kept on the summary rather
+  /// than fetched separately because the same list is already needed to work
+  /// the transfers into the figures above - one stream, two uses.
+  final List<MoneyRequest> transfers;
 
   /// A blank summary, used while the household is still loading.
   ///
@@ -155,6 +238,7 @@ class PeriodSummary {
     savings: [],
     expenses: [],
     spendByMember: {},
+    transfers: [],
   );
 
   bool get isEmpty => monthly.isEmpty && savings.isEmpty;
@@ -198,15 +282,41 @@ class PeriodSummary {
   /// Planned across both members - the "accumulated budget".
   double get planned => monthly.fold(0.0, (sum, b) => sum + b.planned);
   double get spent => monthly.fold(0.0, (sum, b) => sum + b.spent);
-  double get remaining => planned - spent;
-  bool get isOver => planned > 0 && spent > planned;
 
+  /// Money paid into the monthly budgets this period. Not counted as planned:
+  /// it is money that turned up, not money anybody budgeted for.
+  double get income => monthly.fold(0.0, (sum, b) => sum + b.income);
+
+  /// What the household may still spend, income included.
+  double get available => monthly.fold(0.0, (sum, b) => sum + b.available);
+
+  double get remaining => available - spent;
+  bool get isOver => available > 0 && spent > available;
+
+  /// The net movement into saving pots this period: paid in, less taken out.
   double get savedThisPeriod => savings.fold(0.0, (sum, b) => sum + b.spent);
 
   double get progress {
-    if (planned <= 0) return spent > 0 ? 1 : 0;
-    return (spent / planned).clamp(0.0, 1.0);
+    if (available <= 0) return spent > 0 ? 1 : 0;
+    return (spent / available).clamp(0.0, 1.0);
   }
+
+  /// Transfers the viewer asked for, and transfers the viewer was asked for.
+  /// Both directions, every outcome - the history screen shows the lot.
+  List<MoneyRequest> get transfersAsked =>
+      transfers.where((r) => r.requestedBy == viewerUid).toList();
+
+  List<MoneyRequest> get transfersAskedOfMe =>
+      transfers.where((r) => r.requestedFor == viewerUid).toList();
+
+  /// Transfers that touched one budget, either way.
+  ///
+  /// Refused ones are included: "I asked and was told no" is part of a
+  /// budget's story, and leaving it out is how a budget looks like nothing
+  /// ever happened.
+  List<MoneyRequest> transfersFor(String budgetId) => transfers
+      .where((r) => r.fromBudgetId == budgetId || r.toBudgetId == budgetId)
+      .toList();
 
   int get pendingCount =>
       [...monthly, ...savings].fold(0, (sum, b) => sum + b.pendingCount);
@@ -249,10 +359,10 @@ class PeriodSummary {
 
   /// Turns the raw Firestore lists into the object above.
   ///
-  /// The shape of the work is: make three lookup maps in a single pass over the
-  /// expenses, then build each budget's view by reading from those maps. That
-  /// keeps it linear - one pass over the expenses, one over the budgets -
-  /// rather than re-scanning every expense for every budget.
+  /// The shape of the work is: make the lookup maps in a single pass over the
+  /// entries, then build each budget's view by reading from those maps. That
+  /// keeps it linear - one pass over the entries, one over the budgets -
+  /// rather than re-scanning every entry for every budget.
   static PeriodSummary build({
     required Period period,
     required Household household,
@@ -262,31 +372,46 @@ class PeriodSummary {
     required List<Expense> periodExpenses,
     required List<Expense> savingExpenses,
     required List<MoneyRequest> approvedTransfers,
+    List<MoneyRequest> allTransfers = const [],
   }) {
-    // categoryId -> total spent. Same idea for the other two.
-    final spendByCategory = <String, double>{};
-    final spendByBudget = <String, double>{};
+    // Which budgets are saving pots. Needed before anything is tallied,
+    // because it decides how an entry with no direction on it is read - see
+    // `Expense.kind`.
+    final savingIds = budgets.where((b) => b.isSaving).map((b) => b.id).toSet();
+
+    // Two maps per level - one for money out, one for money in - rather than
+    // one map of a record. Two adds are cheaper to read than a pair that has
+    // to be unpacked at every use.
+    final spendingByCategory = <String, double>{};
+    final incomeByCategory = <String, double>{};
+    final spendingByBudget = <String, double>{};
+    final incomeByBudget = <String, double>{};
     final spendByMember = <String, double>{};
 
-    /// Adds one expense into the three maps.
+    /// Adds one entry into the maps.
     ///
     /// `update` takes the existing value and returns the new one; `ifAbsent`
     /// supplies the starting value the first time a key is seen. It saves
     /// writing "if the key is missing, put 0, then add".
     void tally(Expense e, {required bool countTowardMembers}) {
-      spendByBudget.update(
-        e.budgetId,
-        (v) => v + e.amount,
-        ifAbsent: () => e.amount,
-      );
+      final saving = savingIds.contains(e.budgetId);
+      final income = e.kindIn(saving: saving) == EntryKind.income;
+
+      final byBudget = income ? incomeByBudget : spendingByBudget;
+      byBudget.update(e.budgetId, (v) => v + e.amount, ifAbsent: () => e.amount);
+
       if (e.categoryId.isNotEmpty) {
-        spendByCategory.update(
+        final byCategory = income ? incomeByCategory : spendingByCategory;
+        byCategory.update(
           e.categoryId,
           (v) => v + e.amount,
           ifAbsent: () => e.amount,
         );
       }
-      if (countTowardMembers) {
+
+      // Money arriving is nobody's share of the spending, so it stays out of
+      // the who-spent-what split however it was filed.
+      if (countTowardMembers && !income) {
         spendByMember.update(
           e.spentBy,
           (v) => v + e.amount,
@@ -294,8 +419,6 @@ class PeriodSummary {
         );
       }
     }
-
-    final savingIds = budgets.where((b) => b.isSaving).map((b) => b.id).toSet();
 
     for (final e in periodExpenses) {
       // Putting money into savings is not "spending", so it stays out of the
@@ -307,15 +430,17 @@ class PeriodSummary {
     // Saving pots show a running total across every month, so their entries
     // come from a second, unfiltered read. Entries already counted above are
     // skipped - double counting here would inflate the pot.
+    final seen = periodExpenses.map((e) => e.id).toSet();
     for (final e in savingExpenses) {
-      if (periodExpenses.any((p) => p.id == e.id)) continue;
+      if (seen.contains(e.id)) continue;
       tally(e, countTowardMembers: false);
     }
 
-    // Approved transfers, totalled per budget. This is the money-request
-    // feature's entire effect on the numbers.
+    // Approved transfers, totalled per budget and per category. This is the
+    // money-request feature's entire effect on the numbers.
     final transferredIn = <String, double>{};
     final transferredOut = <String, double>{};
+    final transferredOutOfCategory = <String, double>{};
     for (final t in approvedTransfers) {
       transferredOut.update(
         t.fromBudgetId,
@@ -327,28 +452,44 @@ class PeriodSummary {
         (v) => v + t.amount,
         ifAbsent: () => t.amount,
       );
+      // Only when the approver named one. Otherwise it came out of the
+      // budget's unallocated slack and no category is any the poorer.
+      if (t.hasSourceCategory) {
+        transferredOutOfCategory.update(
+          t.fromCategoryId,
+          (v) => v + t.amount,
+          ifAbsent: () => t.amount,
+        );
+      }
     }
 
     BudgetView viewFor(Budget budget) {
+      final saving = budget.isSaving;
+
       final children = categories
           .where((c) => c.budgetId == budget.id)
           .map(
             (c) => CategoryView(
               category: c,
-              spent: spendByCategory[c.id] ?? 0,
+              spending: spendingByCategory[c.id] ?? 0,
+              income: incomeByCategory[c.id] ?? 0,
+              transferredOut: transferredOutOfCategory[c.id] ?? 0,
+              saving: saving,
             ),
           )
           .toList()
         ..sort((a, b) => b.allocated.compareTo(a.allocated));
 
-      final total = spendByBudget[budget.id] ?? 0;
-      final categorised = children.fold(0.0, (sum, c) => sum + c.spent);
+      final spending = spendingByBudget[budget.id] ?? 0;
+      final categorised = children.fold(0.0, (sum, c) => sum + c.spending);
 
       return BudgetView(
         budget: budget,
         categories: children,
-        spent: total,
-        uncategorisedSpend: (total - categorised).clamp(0.0, double.infinity),
+        spending: spending,
+        income: incomeByBudget[budget.id] ?? 0,
+        uncategorisedSpend:
+            (spending - categorised).clamp(0.0, double.infinity),
         transferredIn: transferredIn[budget.id] ?? 0,
         transferredOut: transferredOut[budget.id] ?? 0,
       );
@@ -362,6 +503,10 @@ class PeriodSummary {
       savings: budgets.where((b) => b.isSaving).map(viewFor).toList(),
       expenses: periodExpenses,
       spendByMember: spendByMember,
+      // Falls back to the approved ones when the full history has not been
+      // passed, so a caller that only cares about the figures need not fetch
+      // it twice.
+      transfers: allTransfers.isEmpty ? approvedTransfers : allTransfers,
     );
   }
 }

@@ -501,6 +501,48 @@ const Map<String, String> _id = {
   'error.too_many': 'Terlalu banyak percobaan. Tunggu sebentar.',
   'error.unknown': 'Ada yang tidak beres. Coba lagi.',
 
+  // ------------------------------------------------- income & transfers
+  'expense.new_income': 'Catat pemasukan',
+  'expense.edit_income': 'Ubah pemasukan',
+  'expense.kind_spending': 'Keluar',
+  'expense.kind_income': 'Masuk',
+
+  'category_editor.headroom': 'Sisa {amount} dari {total} belum dibagi.',
+  'category_editor.none_left':
+      'Semua anggaran sudah dibagi. Kurangi kategori lain dulu.',
+  'category_editor.err_over':
+      'Kelebihan {over}. Di {budget} cuma sisa {headroom} yang belum dibagi \u2014 '
+          'kurangi kategori lain dulu, atau naikkan jumlah anggarannya.',
+
+  'detail.taken_out': 'Diambil lagi',
+  'detail.income_added': '{amount} masuk ke anggaran ini.',
+  'detail.record_income': 'Catat pemasukan',
+  'detail.record_spending': 'Catat pengeluaran',
+  'detail.record_deposit': 'Setor',
+  'detail.record_withdrawal': 'Ambil',
+
+  'inbox.all_allocated':
+      '{budget} sudah dibagi habis ke kategori. Nanti kamu pilih kategori '
+          'mana yang dikurangi.',
+  'inbox.take_from_title': 'Ambil dari kategori mana?',
+  'inbox.take_from_blurb':
+      '{amount} akan dikurangi dari salah satu kategori di {budget}.',
+  'inbox.only_has': 'Cuma ada {amount}',
+  'inbox.no_categories_to_take_from':
+      'Tidak ada kategori yang bisa dikurangi di anggaran ini.',
+
+  'history.title': 'Riwayat dana',
+  'history.on_this_budget': 'Perpindahan dana',
+  'history.received_from': 'Terima dari {name}',
+  'history.gave_to': 'Kasih ke {name}',
+  'history.refused_by': '{name} menolak',
+  'history.you_refused': 'Kamu tolak permintaan {name}',
+  'history.out_of': 'dari {category}',
+
+  'saving_seed.education': 'Pendidikan',
+  'saving_seed.emergency': 'Dana darurat',
+  'saving_seed.other': 'Lainnya',
+
   // ---------------------------------------------------------- app-level
   'splash.preparing': 'Menyiapkan rumah tangga kamu\u2026',
 
@@ -900,6 +942,47 @@ const Map<String, String> _en = {
   'error.credentials': 'That email or password is wrong.',
   'error.too_many': 'Too many attempts. Wait a moment.',
   'error.unknown': 'Something went wrong. Try again.',
+
+  'expense.new_income': 'Add income',
+  'expense.edit_income': 'Edit income',
+  'expense.kind_spending': 'Out',
+  'expense.kind_income': 'In',
+
+  'category_editor.headroom': '{amount} of {total} still unallocated.',
+  'category_editor.none_left':
+      'All of it is allocated. Free some up from another category first.',
+  'category_editor.err_over':
+      'That is {over} too much. {budget} has only {headroom} unallocated \u2014 '
+          'lower another category first, or raise the budget itself.',
+
+  'detail.taken_out': 'Taken back out',
+  'detail.income_added': '{amount} paid into this budget.',
+  'detail.record_income': 'Add income',
+  'detail.record_spending': 'Add spending',
+  'detail.record_deposit': 'Pay in',
+  'detail.record_withdrawal': 'Take out',
+
+  'inbox.all_allocated':
+      '{budget} is fully carved into categories. You will pick which one this '
+          'comes out of.',
+  'inbox.take_from_title': 'Take it out of which category?',
+  'inbox.take_from_blurb':
+      '{amount} comes off one of the categories in {budget}.',
+  'inbox.only_has': 'Only has {amount}',
+  'inbox.no_categories_to_take_from':
+      'No category in this budget has anything to give.',
+
+  'history.title': 'Money history',
+  'history.on_this_budget': 'Money moved',
+  'history.received_from': 'Got it from {name}',
+  'history.gave_to': 'Gave it to {name}',
+  'history.refused_by': '{name} said no',
+  'history.you_refused': 'You turned {name} down',
+  'history.out_of': 'out of {category}',
+
+  'saving_seed.education': 'Education',
+  'saving_seed.emergency': 'Emergency fund',
+  'saving_seed.other': 'Other',
 
   'app.cannot_reach': 'Could not reach your data',
   'app.setup_title': 'One setup step left',

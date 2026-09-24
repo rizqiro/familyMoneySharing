@@ -16,15 +16,27 @@ import '../money/request_money_sheet.dart';
 
 /// Opens the add/edit sheet.
 ///
-/// An expense may only be filed against a budget the person controls. Both
+/// An entry may only be filed against a budget the person controls. Both
 /// members still SEE every entry - the ledger is shared - but the money has to
 /// come out of a pot that is yours. To spend from your partner's, ask them to
 /// move some across (see [showRequestMoneySheet]).
+///
+/// =============================================================================
+/// SPENDING AND INCOME ARE THE SAME SHEET
+/// =============================================================================
+/// Both are an amount, a budget, a category, a date and a note. The only
+/// difference is the direction, so it is a two-way switch at the top rather
+/// than a second screen that would duplicate all five fields.
+///
+/// On a saving pot the switch starts on income, because the usual thing you do
+/// with a pot is put money in. On a monthly budget it starts on spending, for
+/// the same reason the other way round.
 Future<void> showExpenseEditor(
   BuildContext context, {
   Expense? existing,
   String? budgetId,
   String? categoryId,
+  EntryKind? kind,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -33,6 +45,7 @@ Future<void> showExpenseEditor(
       existing: existing,
       initialBudgetId: budgetId,
       initialCategoryId: categoryId,
+      initialKind: kind,
     ),
   );
 }
@@ -43,11 +56,13 @@ class ExpenseEditor extends ConsumerStatefulWidget {
     this.existing,
     this.initialBudgetId,
     this.initialCategoryId,
+    this.initialKind,
   });
 
   final Expense? existing;
   final String? initialBudgetId;
   final String? initialCategoryId;
+  final EntryKind? initialKind;
 
   @override
   ConsumerState<ExpenseEditor> createState() => _ExpenseEditorState();
@@ -64,6 +79,11 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
 
   String? _budgetId;
   String? _categoryId;
+  late EntryKind _kind;
+
+  /// Set once the direction has been chosen by hand, which stops a later
+  /// budget change from overriding it.
+  bool _kindTouched = false;
   late DateTime _date = widget.existing?.spentAt ?? DateTime.now();
   bool _busy = false;
   String? _error;
@@ -83,7 +103,28 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
     _categoryId = widget.existing?.categoryId.isNotEmpty == true
         ? widget.existing!.categoryId
         : widget.initialCategoryId;
+
+    // An existing entry keeps its own direction, resolved through the saving
+    // rule for rows written before income existed. A new one follows whatever
+    // the caller asked for, or the budget's usual direction.
+    final existing = widget.existing;
+    _kind = existing != null
+        ? existing.kindIn(saving: _isSavingBudget(existing.budgetId))
+        : (widget.initialKind ??
+            (_isSavingBudget(_budgetId)
+                ? EntryKind.income
+                : EntryKind.spending));
   }
+
+  /// Is this budget a saving pot? Read rather than watched: it is only needed
+  /// while working out a default in initState.
+  bool _isSavingBudget(String? budgetId) {
+    if (budgetId == null) return false;
+    final summary = ref.read(summaryProvider);
+    return summary.savings.any((v) => v.budget.id == budgetId);
+  }
+
+  bool get _isIncome => _kind == EntryKind.income;
 
   @override
   void dispose() {
@@ -150,6 +191,7 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
             note: _note.text,
             spentAt: _date,
             period: period,
+            kind: _kind,
           ),
         );
       } else {
@@ -165,6 +207,7 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
             spentAt: _date,
             period: period,
             createdAt: null,
+            kind: _kind,
           ),
         );
       }
@@ -239,7 +282,9 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
               children: [
                 Expanded(
                   child: Text(
-                    _isEdit ? t('expense.edit') : t('expense.new'),
+                    _isEdit
+                        ? t(_isIncome ? 'expense.edit_income' : 'expense.edit')
+                        : t(_isIncome ? 'expense.new_income' : 'expense.new'),
                     style: text.titleLarge,
                   ),
                 ),
@@ -249,6 +294,18 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
                     icon: Icon(Icons.delete_outline, color: colors.negative),
                   ),
               ],
+            ),
+            const SizedBox(height: Insets.md),
+
+            // Which way the money is going. Above the amount rather than below
+            // it, because it changes what the amount MEANS - reading the
+            // figure first and the direction second is how you misfile one.
+            _DirectionSwitch(
+              kind: _kind,
+              onChanged: (kind) => setState(() {
+                _kind = kind;
+                _kindTouched = true;
+              }),
             ),
             const SizedBox(height: Insets.lg),
 
@@ -263,7 +320,10 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
               decoration: InputDecoration(
                 hintText: '0',
                 hintStyle: text.displayMedium?.copyWith(color: colors.inkMuted),
-                prefixText: '${money.symbol} ',
+                // A sign in front of the figure, so the direction is visible
+                // while you are looking at the number rather than only at the
+                // switch above.
+                prefixText: '${_isIncome ? '+' : '\u2212'} ${money.symbol} ',
                 prefixStyle: text.titleMedium?.copyWith(
                   color: colors.inkMuted,
                 ),
@@ -299,6 +359,13 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
                       onSelected: (_) => setState(() {
                         _budgetId = budget.id;
                         _categoryId = null;
+                        // Switching to a saving pot flips the default
+                        // direction, unless you already chose one yourself.
+                        if (!_isEdit && !_kindTouched) {
+                          _kind = _isSavingBudget(budget.id)
+                              ? EntryKind.income
+                              : EntryKind.spending;
+                        }
                       }),
                     ),
                 ],
@@ -367,6 +434,113 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
                       : t('expense.add'),),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Spending or income, as one two-way switch.
+///
+/// The selected half is filled - red for money out, green for money in - and
+/// the unselected half is plain. Colour alone would not be enough (red and
+/// green are the classic pair to confuse), so each half also carries an arrow
+/// pointing the way the money goes, and its own word.
+class _DirectionSwitch extends ConsumerWidget {
+  const _DirectionSwitch({required this.kind, required this.onChanged});
+
+  final EntryKind kind;
+  final ValueChanged<EntryKind> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final t = ref.watch(textProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(Insets.xs),
+      decoration: BoxDecoration(
+        color: colors.track,
+        borderRadius: BorderRadius.circular(Radii.pill),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _Half(
+              label: t('expense.kind_spending'),
+              icon: Icons.arrow_outward,
+              selected: kind == EntryKind.spending,
+              fill: colors.accent,
+              onTap: () => onChanged(EntryKind.spending),
+            ),
+          ),
+          Expanded(
+            child: _Half(
+              label: t('expense.kind_income'),
+              icon: Icons.arrow_downward,
+              selected: kind == EntryKind.income,
+              fill: colors.positive,
+              onTap: () => onChanged(EntryKind.income),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Half extends StatelessWidget {
+  const _Half({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.fill,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color fill;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final tone = selected ? Colors.white : colors.inkSecondary;
+
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? fill : Colors.transparent,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const StadiumBorder(),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 16, color: tone),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: tone,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

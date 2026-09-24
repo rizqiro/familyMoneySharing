@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../core/i18n/app_text.dart';
+
 /// Where a category sits in the two-party confirmation flow.
 enum AllocationStatus {
   /// Waiting on the other member to confirm the allocation.
@@ -98,6 +100,22 @@ class SpendCategory {
         'confirmedBy': confirmedBy,
         'decisionNote': decisionNote,
       };
+
+  /// The categories a new saving pot starts with.
+  ///
+  /// Every pot people actually keep turns out to be one of these three: money
+  /// for something planned, money for something going wrong, and everything
+  /// else. They are created at zero, so they are headings to fill in rather
+  /// than a plan anybody has agreed to.
+  ///
+  /// [AppText] is passed in rather than reached for, because this is a model:
+  /// it should not know how the app gets hold of its translations, only that
+  /// the caller has them.
+  static List<(String, String)> savingSeeds(AppText t) => [
+        ('\u{1F393}', t('saving_seed.education')),
+        ('\u{1F6A8}', t('saving_seed.emergency')),
+        ('\u{1F4E6}', t('saving_seed.other')),
+      ];
 
   /// A short, neutral set of starting categories offered on an empty budget.
   static const suggestions = <(String, String)>[
