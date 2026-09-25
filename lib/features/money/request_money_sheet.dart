@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format/failure.dart';
 import '../../core/format/money.dart';
+import '../../core/format/money_input.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -297,8 +298,10 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
             TextField(
               controller: _amount,
               autofocus: true,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: TextInputType.numberWithOptions(
+                decimal: money.decimals > 0,
+              ),
+              inputFormatters: moneyInputFormatters(money),
               style: text.displayMedium,
               decoration: InputDecoration(
                 hintText: '0',

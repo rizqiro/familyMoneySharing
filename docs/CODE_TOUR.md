@@ -373,6 +373,20 @@ Reusable pieces live in `lib/core/widgets/`:
 - `SpendChart` and `FullBleed` - the charts. See below.
 - `SectionHeader`, `Tag`, `EmptyState`, `Stat` and friends in `common.dart`.
 
+**Money fields.** Every amount input passes `moneyInputFormatters(money)` from
+`core/format/money_input.dart`. It keeps the field to digits and groups them as
+you type - `12.000.000`, in whatever grouping the household's currency uses.
+
+A numeric keyboard is not enough on its own: some Android keypads show letters
+anyway, hardware keyboards ignore the hint, and pasting skips the keyboard
+entirely. The formatter is the rule; the keyboard type is a convenience.
+
+The fiddly part is the cursor, which is counted in *digits* rather than
+characters - otherwise correcting a digit in the middle throws the caret to the
+end as the separators shift underneath. `test/money_input_test.dart` pins all of
+it, including that whatever the field shows still parses back to the same
+number.
+
 ---
 
 ## 8b. The charts

@@ -502,7 +502,8 @@ const Map<String, String> _id = {
   'error.unknown': 'Ada yang tidak beres. Coba lagi.',
 
   // ------------------------------------------------- income & transfers
-  'expense.new_income': 'Catat pemasukan',
+  'expense.new_income': 'Pemasukan baru',
+  'expense.add_income': 'Tambah pemasukan',
   'expense.edit_income': 'Ubah pemasukan',
   'expense.kind_spending': 'Keluar',
   'expense.kind_income': 'Masuk',
@@ -943,7 +944,8 @@ const Map<String, String> _en = {
   'error.too_many': 'Too many attempts. Wait a moment.',
   'error.unknown': 'Something went wrong. Try again.',
 
-  'expense.new_income': 'Add income',
+  'expense.new_income': 'New income',
+  'expense.add_income': 'Add income',
   'expense.edit_income': 'Edit income',
   'expense.kind_spending': 'Out',
   'expense.kind_income': 'In',

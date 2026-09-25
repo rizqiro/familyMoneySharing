@@ -41,6 +41,15 @@ class Money {
 
   String get symbol => _option.symbol;
 
+  /// How many decimal places this currency actually uses - 0 for IDR, JPY and
+  /// VND, 2 for most others. The input formatter needs it to decide whether a
+  /// decimal separator is allowed at all.
+  int get decimals => _option.decimals;
+
+  /// The locale whose grouping and decimal separators this currency is written
+  /// with. `1.250.000` in id_ID, `1,250,000` in en_US.
+  String get locale => _option.locale;
+
   /// `Rp 1.250.000` - the default for anything the user reads as an amount.
   String format(num amount) {
     final f = NumberFormat.currency(
