@@ -73,8 +73,8 @@ class DashboardPage extends ConsumerWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final partnerName = partner?.displayName.trim().split(' ').first ??
-        t('common.partner');
+    final partnerName =
+        partner?.displayName.trim().split(' ').first ?? t('common.partner');
 
     return Scaffold(
       body: SafeArea(
@@ -157,7 +157,8 @@ class DashboardPage extends ConsumerWidget {
                     categories: summary.categoriesBySpend,
                     money: money,
                     otherLabel: t('dashboard.other', {
-                      'count': '${(summary.categoriesBySpend.where((c) => c.spent > 0).length - 6).clamp(0, 999)}',
+                      'count':
+                          '${(summary.categoriesBySpend.where((c) => c.spent > 0).length - 6).clamp(0, 999)}',
                     }),
                   ),
                 ),
@@ -221,37 +222,46 @@ class _Header extends ConsumerWidget {
     final t = ref.watch(textProvider);
     final profile = ref.watch(profileProvider).valueOrNull;
 
-    return Row(
+    return Column(
       children: [
-        // `Expanded` tells the Row to give this child whatever width is left
-        // after the fixed-size children. Without it, a long household name
-        // would overflow and Flutter would paint the yellow-and-black stripes.
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                householdName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: text.titleLarge,
+        Row(
+          children: [
+            // `Expanded` tells the Row to give this child whatever width is left
+            // after the fixed-size children. Without it, a long household name
+            // would overflow and Flutter would paint the yellow-and-black stripes.
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    householdName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleLarge,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    t('dashboard.subtitle'),
+                    style: text.bodySmall?.copyWith(color: colors.inkMuted),
+                  ),
+                ],
               ),
-              const SizedBox(height: 2),
-              Text(
-                t('dashboard.subtitle'),
-                style: text.bodySmall?.copyWith(color: colors.inkMuted),
+            ),
+            const SizedBox(width: Insets.sm),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
               ),
-            ],
-          ),
+              child: MemberAvatar(initial: profile?.initial ?? '?'),
+            ),
+          ],
         ),
-        const PeriodSwitcher(),
-        const SizedBox(width: Insets.sm),
-        GestureDetector(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const SettingsPage()),
-          ),
-          child: MemberAvatar(initial: profile?.initial ?? '?'),
+        const SizedBox(
+          height: Insets.md,
         ),
+        const Center(
+          child: PeriodSwitcher(),
+        )
       ],
     );
   }
@@ -364,7 +374,8 @@ class _ChartBlock extends ConsumerWidget {
               Tag(
                 label: t('dashboard.per_day_left', {
                   'amount': money.compact(
-                    summary.dailyAllowanceFor(focus?.remaining ?? summary.remaining),
+                    summary.dailyAllowanceFor(
+                        focus?.remaining ?? summary.remaining),
                   ),
                 }),
                 color: colors.accentDeep,
@@ -389,8 +400,10 @@ class _ChartBlock extends ConsumerWidget {
                 // would land on top of the bars. The caption underneath says it
                 // instead.
                 ? null
-                : t('chart.budget_of',
-                    {'amount': money.compact(series.reference)},),
+                : t(
+                    'chart.budget_of',
+                    {'amount': money.compact(series.reference)},
+                  ),
             calloutLabel: range == ChartRange.month && series.spent > 0
                 ? money.format(series.spent)
                 : null,
@@ -531,8 +544,10 @@ class _ChartCaption extends ConsumerWidget {
     if (series.reference <= 0) return '';
     final over = series.points.where((p) => p.value > series.reference).length;
     if (over == 0) {
-      return t('chart.daily_note_none',
-          {'amount': money.compact(series.reference)},);
+      return t(
+        'chart.daily_note_none',
+        {'amount': money.compact(series.reference)},
+      );
     }
     return t.plural(
       over,
@@ -796,7 +811,6 @@ class _AccumulatedCard extends ConsumerWidget {
             ),
             style: text.bodySmall?.copyWith(color: colors.inkSecondary),
           ),
-
           if (partner != null) ...[
             const SizedBox(height: Insets.lg),
             Divider(color: colors.hairline, height: 1),
@@ -820,7 +834,6 @@ class _AccumulatedCard extends ConsumerWidget {
               ],
             ),
           ],
-
           if (summary.savedThisPeriod > 0) ...[
             const SizedBox(height: Insets.lg),
             Divider(color: colors.hairline, height: 1),
@@ -905,8 +918,7 @@ class _TheirBudgetCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     t('dashboard.see_not_spend'),
-                    style:
-                        text.bodySmall?.copyWith(color: colors.inkSecondary),
+                    style: text.bodySmall?.copyWith(color: colors.inkSecondary),
                   ),
                 ),
                 const SizedBox(width: Insets.sm),

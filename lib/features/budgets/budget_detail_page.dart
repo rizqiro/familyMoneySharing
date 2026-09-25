@@ -62,9 +62,8 @@ class BudgetDetailPage extends ConsumerWidget {
         ? t('common.you')
         : household.displayNameOf(view.budget.controllerId);
 
-    final expenses = summary.expenses
-        .where((e) => e.budgetId == budgetId)
-        .toList();
+    final expenses =
+        summary.expenses.where((e) => e.budgetId == budgetId).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -98,8 +97,7 @@ class BudgetDetailPage extends ConsumerWidget {
       ),
       floatingActionButton: isController
           ? FloatingActionButton.extended(
-              onPressed: () =>
-                  showCategoryEditor(context, budget: view.budget),
+              onPressed: () => showCategoryEditor(context, budget: view.budget),
               backgroundColor: colors.accent,
               foregroundColor: colors.onAccent,
               elevation: 0,
@@ -124,25 +122,21 @@ class BudgetDetailPage extends ConsumerWidget {
               isController: isController,
             ),
             const SizedBox(height: Insets.xl),
-
             if (view.isOverAllocated)
               Padding(
                 padding: const EdgeInsets.only(bottom: Insets.lg),
                 child: ErrorNote(
-                  message:
-                      t('detail.over_allocated', {
-                        'allocated': money.format(view.allocated),
-                        'planned': money.format(view.planned),
-                      }),
+                  message: t('detail.over_allocated', {
+                    'allocated': money.format(view.allocated),
+                    'planned': money.format(view.planned),
+                  }),
                 ),
               ),
-
             SectionHeader(
               title: t('detail.categories'),
               action: isController ? t('common.add') : null,
               onAction: () => showCategoryEditor(context, budget: view.budget),
             ),
-
             if (view.categories.isEmpty)
               EmptyState(
                 icon: Icons.category_outlined,
@@ -150,10 +144,11 @@ class BudgetDetailPage extends ConsumerWidget {
                 title: t('detail.no_categories'),
                 message: isController
                     ? t('detail.no_categories_yours')
-                    : t('detail.no_categories_theirs',
-                        {'name': controllerName},),
-                actionLabel:
-                    isController ? t('detail.add_category') : null,
+                    : t(
+                        'detail.no_categories_theirs',
+                        {'name': controllerName},
+                      ),
+                actionLabel: isController ? t('detail.add_category') : null,
                 onAction: isController
                     ? () => showCategoryEditor(context, budget: view.budget)
                     : null,
@@ -174,7 +169,6 @@ class BudgetDetailPage extends ConsumerWidget {
                         _confirmDeleteCategory(context, ref, category),
                   ),
                 ),
-
             if (view.uncategorisedSpend > 0) ...[
               const SizedBox(height: Insets.sm),
               SoftCard(
@@ -198,7 +192,6 @@ class BudgetDetailPage extends ConsumerWidget {
                 ),
               ),
             ],
-
             if (summary.transfersFor(budgetId).any((r) => !r.isPending)) ...[
               const SizedBox(height: Insets.xl),
               SectionHeader(title: t('history.on_this_budget')),
@@ -208,7 +201,6 @@ class BudgetDetailPage extends ConsumerWidget {
                 limit: 5,
               ),
             ],
-
             const SizedBox(height: Insets.xl),
             SectionHeader(
               title: t('detail.activity', {'count': '${expenses.length}'}),
@@ -220,8 +212,10 @@ class BudgetDetailPage extends ConsumerWidget {
                 title: t('detail.nothing_spent'),
                 message: isController
                     ? t('detail.nothing_spent_yours')
-                    : t('detail.nothing_spent_theirs',
-                        {'name': controllerName},),
+                    : t(
+                        'detail.nothing_spent_theirs',
+                        {'name': controllerName},
+                      ),
               )
             else
               SoftCard(
@@ -403,15 +397,19 @@ class _SpentSection extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: Insets.md),
-            Text(
-              t(saving ? 'detail.of_target' : 'detail.of_planned',
-                  {'amount': money.format(view.planned)},),
-              style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
-            ),
           ],
         ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            t(
+              saving ? 'detail.of_target' : 'detail.of_planned',
+              {'amount': money.format(view.planned)},
+            ),
+            style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
+          ),
+        ),
         const SizedBox(height: Insets.lg),
-
         // A saving pot is filling up, not draining, so the pace line and the
         // projection mean nothing there - it gets the plain meter instead.
         if (saving)
@@ -433,8 +431,10 @@ class _SpentSection extends ConsumerWidget {
                 'spent': money.format(series.spent),
                 'budget': money.format(series.reference),
               }),
-              referenceLabel: t('chart.budget_of',
-                  {'amount': money.compact(series.reference)},),
+              referenceLabel: t(
+                'chart.budget_of',
+                {'amount': money.compact(series.reference)},
+              ),
               calloutLabel:
                   series.spent > 0 ? money.format(series.spent) : null,
             ),
@@ -530,9 +530,9 @@ class _SpentSection extends ConsumerWidget {
             children: [
               Expanded(
                 child: _RecordButton(
-                  label: t(saving
-                      ? 'detail.record_deposit'
-                      : 'detail.record_income',),
+                  label: t(
+                    saving ? 'detail.record_deposit' : 'detail.record_income',
+                  ),
                   icon: Icons.arrow_downward,
                   tone: colors.positive,
                   onTap: () => showExpenseEditor(
@@ -545,9 +545,11 @@ class _SpentSection extends ConsumerWidget {
               const SizedBox(width: Insets.md),
               Expanded(
                 child: _RecordButton(
-                  label: t(saving
-                      ? 'detail.record_withdrawal'
-                      : 'detail.record_spending',),
+                  label: t(
+                    saving
+                        ? 'detail.record_withdrawal'
+                        : 'detail.record_spending',
+                  ),
                   icon: Icons.arrow_outward,
                   tone: colors.accent,
                   onTap: () => showExpenseEditor(
@@ -633,7 +635,9 @@ class _PaceWarning extends ConsumerWidget {
               '${t('chart.projection_over', {
                     'amount': money.format(series.projected),
                     'over': money.format(series.projectedOverspend),
-                  })} ${fix > 0 ? t('chart.fix_daily', {'amount': money.format(fix)}) : t('chart.fix_stop')}',
+                  })} ${fix > 0 ? t('chart.fix_daily', {
+                      'amount': money.format(fix)
+                    }) : t('chart.fix_stop')}',
               style: Theme.of(context)
                   .textTheme
                   .bodySmall
@@ -668,8 +672,7 @@ class _WhereItStands extends ConsumerWidget {
     // What the categories still hold: allocated to them, not yet spent from
     // them. Clamped because a category can be overspent, which would otherwise
     // make this negative and the bar draw backwards.
-    final reserved =
-        (view.allocated - categorised).clamp(0.0, double.infinity);
+    final reserved = (view.allocated - categorised).clamp(0.0, double.infinity);
     final free = view.unallocated;
     final total = spent + reserved + free;
     if (total <= 0) return const SizedBox.shrink();
@@ -804,12 +807,21 @@ class _CategoryCard extends ConsumerWidget {
     // A record pattern: three values pulled out of one switch. Keeps the
     // colour, icon and wording for a status decided in a single place.
     final (statusColor, statusIcon, statusKey) = switch (category.status) {
-      AllocationStatus.pending =>
-        (colors.warning, Icons.schedule, 'status.pending'),
-      AllocationStatus.approved =>
-        (colors.positive, Icons.check_circle, 'status.approved'),
-      AllocationStatus.rejected =>
-        (colors.negative, Icons.cancel_outlined, 'status.rejected'),
+      AllocationStatus.pending => (
+          colors.warning,
+          Icons.schedule,
+          'status.pending'
+        ),
+      AllocationStatus.approved => (
+          colors.positive,
+          Icons.check_circle,
+          'status.approved'
+        ),
+      AllocationStatus.rejected => (
+          colors.negative,
+          Icons.cancel_outlined,
+          'status.rejected'
+        ),
     };
 
     return SoftCard(

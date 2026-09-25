@@ -101,3 +101,12 @@ colours.
 The spend meter carries a **pace marker**: the tick shows how far through the
 month you are, so "60% spent" can be read against "we're 40% through" without a
 second chart.
+
+##Bug and features
+
+#BUG :
+1. Saat membuat kategori pada budget/anggaran, jumlah dana yang dikategorikan masih dapat melebihi dana total budget yang di anggarkan. fix : dana yang dikategorikan tidak dapat melebihi dana total pada budget. jika melebihi, maka applikasi harus mengingatkan user dan memberitahu untuk mengadjust dana pada kategori lain sehingga total dana pada semua kategori sesuai dengan total dana pada budget dan tidak ada alarm pembagian melebihi rencana pada kartu budget. namun begitu user tetap dapat menghabiskan uang lebih banyak pada masing-masing kategori yang sudah di anggarkan, sehingga masih memungkinkan untuk terjadinya perbedaan antara aktual spending dengan perencanaan. 
+2. Setelah mengkonfirmasi pemberian uang, tidak ada riwayat pemberian uang pada budget user yang dimintai uang, padahal ada alasan untuk apa pada form permintaan uang di pihak partner. fix : tambahkan riwayat permintaan dana pada masing-masing user dan partner baik riwayat saat melakukan request dana atau memberi dana. Juga tampilkan riwayat penolakan dana jika user atau partner menolak memberi dana.
+3. Setelah mengkonfirmasi pemberian uang, dana anggaran pada pihak pemberi dana tetap terpotong walaupun semua dana sudah di alokasikan pada tiap tiap kategori, dan tidak ada sisa dana yang belum dibagi atau dikategorikan. fix : jika tidak ada dana yang belum dibagi pada budget pihak pemberi dana, maka aplikasi harus mengarahkan ke kategori mana budget akan diambil untuk memberi dana ke partner.
+4. The app only accomodate for expense on the budget, but not accomodate for income to the budget. fix: tambahakan opsi pemasukkan untuk budget, dan tambahkan riwayat pemasukkan juga
+5. pada anggaran dengan kategori tabungan/saving, untuk menambahkan dana pada tabungan, user malah harus memasukkan pengeluaran pada menu utama agar dana tabungan bertambah. hal ini aneh karena harusnya user menambahkan pemasukkan sehingga tabungannya bertambah, dan menambahkan pengeluaran untuk menghabiskan tabungannya. fix : tambahakan opsi pemasukkan untuk budget, dan tambahkan riwayat pemasukkan juga pada kategori tabungan. juga untuk anggaran tabungan, tambahkan kategori pendidikan, dana darurat, dan lain-lain.
