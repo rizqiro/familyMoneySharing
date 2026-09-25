@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/format/failure.dart';
 import '../../core/format/money.dart';
+import '../../core/format/money_input.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
@@ -224,8 +225,13 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
             const SizedBox(height: Insets.sm),
             TextField(
               controller: _amount,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              // The keyboard hint is a convenience - some Android keypads show
+              // letters anyway, and pasting skips the keyboard entirely. The
+              // formatter below is what actually keeps this field numeric.
+              keyboardType: TextInputType.numberWithOptions(
+                decimal: money.decimals > 0,
+              ),
+              inputFormatters: moneyInputFormatters(money),
               decoration: InputDecoration(
                 hintText: '0',
                 prefixText: '${money.symbol} ',

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/format/failure.dart';
 import '../../core/format/money.dart';
+import '../../core/format/money_input.dart';
 import '../../core/format/period.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
@@ -313,8 +314,10 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
             TextField(
               controller: _amount,
               autofocus: !_isEdit,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: TextInputType.numberWithOptions(
+                decimal: money.decimals > 0,
+              ),
+              inputFormatters: moneyInputFormatters(money),
               textAlign: TextAlign.center,
               style: text.displayMedium,
               decoration: InputDecoration(
@@ -421,17 +424,30 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
             ],
 
             const SizedBox(height: Insets.xl),
+            // The button follows the switch at the top: green and "Add income"
+            // for money in, accent and "Add expense" for money out. A button
+            // that stays red and says "Add expense" while the sheet is set to
+            // income is telling you the opposite of what it will do.
             FilledButton(
               onPressed: _busy || budgets.isEmpty ? null : _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: _isIncome ? colors.positive : colors.accent,
+                foregroundColor: Colors.white,
+              ),
               child: _busy
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
-                  : Text(_isEdit
-                      ? t('common.save_changes')
-                      : t('expense.add'),),
+                  : Text(
+                      _isEdit
+                          ? t('common.save_changes')
+                          : t(_isIncome ? 'expense.add_income' : 'expense.add'),
+                    ),
             ),
           ],
         ),
