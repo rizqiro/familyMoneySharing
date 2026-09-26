@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_mark.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/providers.dart';
 
@@ -72,19 +73,10 @@ class SplashPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Spacer(),
-                    Container(
-                      width: 76,
-                      height: 76,
-                      decoration: BoxDecoration(
-                        color: colors.page,
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                      child: Icon(
-                        Icons.account_balance_wallet_outlined,
-                        size: 36,
-                        color: colors.accent,
-                      ),
-                    ),
+                    // The launcher icon's own mark, on the same ground, at the
+                    // same proportions. Opening the app should look like the
+                    // icon growing rather than like a second piece of artwork.
+                    const AppMark(size: 104),
                     const SizedBox(height: Insets.xl + 4),
                     Text(
                       t('auth.app_name'),

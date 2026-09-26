@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The adaptive icon, used on Android 8 and newer.
+
+  Two layers the launcher composites and masks to whatever shape it likes -
+  circle, squircle, rounded square - and animates on touch. The foreground is
+  the mark on transparency; the background is a flat colour, which is all this
+  icon needs and is cheaper than a bitmap at five densities.
+
+  Older launchers fall back to the ic_launcher.png in each mipmap folder.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>
