@@ -204,11 +204,24 @@ class EmptyState extends StatelessWidget {
 }
 
 /// One-line failure with a retry, used in place of a raw exception string.
+///
+/// [retryLabel] is required whenever [onRetry] is, so the button cannot quietly
+/// ship an English word into an app whose default language is Indonesian. Pass
+/// `t('common.retry')`.
 class ErrorNote extends StatelessWidget {
-  const ErrorNote({super.key, required this.message, this.onRetry});
+  const ErrorNote({
+    super.key,
+    required this.message,
+    this.onRetry,
+    this.retryLabel,
+  }) : assert(
+          onRetry == null || retryLabel != null,
+          'a retry button needs a translated label',
+        );
 
   final String message;
   final VoidCallback? onRetry;
+  final String? retryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +246,7 @@ class ErrorNote extends StatelessWidget {
             ),
           ),
           if (onRetry != null)
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(retryLabel!)),
         ],
       ),
     );

@@ -43,6 +43,34 @@ import 'translations_regional.dart';
 /// `{name}` and friends are placeholders. Keep them spelled the same in every
 /// language - they are replaced with real values at runtime - but move them
 /// wherever the grammar needs them.
+///
+/// =============================================================================
+/// HOW THE APP IS MEANT TO SOUND
+/// =============================================================================
+/// Blunt, and slightly boring. Every line below was once longer and more
+/// elegant, and that was the problem: well-turned interface copy reads as
+/// written, and a person checking whether they can afford groceries does not
+/// want to be read to. Concretely, when you add a line:
+///
+///   - One idea per line. If it needs two sentences, the second should carry a
+///     fact, not a reason.
+///   - No em dashes. Indonesian consumer apps do not use them; a comma, a full
+///     stop or a colon always works.
+///   - No lists of three. Two items, or one.
+///   - No "not X, but Y". Say Y.
+///   - No aphorisms, however good. "Uang itu dibagi, jadi aplikasinya juga"
+///     was here, and it was the most AI-sounding sentence in the app.
+///   - No metaphors translated out of English. "Where the money stands" became
+///     "UANGNYA BERDIRI DI SINI", which is not a thing anyone says. It is now
+///     just "RINCIAN".
+///   - Contractions in English ("isn't", "you'll"). Their absence is itself a
+///     tell.
+///   - Nothing about Firebase, Firestore, rules or indexes. Those are notes to
+///     the developer; they belong in comments, and the raw error code that
+///     `describeFailure` appends is enough to debug from.
+///
+/// A label the user reads fifty times a day should be one word if one word will
+/// do. 'dashboard.left_to_spend' is 'SISA', not 'SISA UNTUK DIBELANJAKAN'.
 class AppText {
   const AppText(this.language);
 
@@ -102,7 +130,7 @@ const Map<String, String> _id = {
   'common.remove': 'Hapus',
   'common.edit': 'Ubah',
   'common.add': 'Tambah',
-  'common.confirm': 'Setujui',
+  'common.confirm': 'Setuju',
   'common.decline': 'Tolak',
   'common.retry': 'Coba lagi',
   'common.you': 'Kamu',
@@ -114,36 +142,34 @@ const Map<String, String> _id = {
 
   // --------------------------------------------------------------- auth
   'auth.app_name': 'Family Money',
-  'auth.tagline': 'Satu gambaran bersama ke mana uang kalian pergi.',
-  'auth.welcome_back': 'Selamat datang kembali.',
+  'auth.tagline': 'Catat uang bareng pasangan.',
+  'auth.welcome_back': 'Selamat datang kembali',
   'auth.name_hint': 'Nama kamu',
   'auth.email_hint': 'Email',
   'auth.password_hint': 'Kata sandi',
   'auth.forgot_password': 'Lupa kata sandi',
   'auth.sign_in': 'Masuk',
   'auth.create_account': 'Buat akun',
-  'auth.have_account': 'Saya sudah punya akun',
+  'auth.have_account': 'Sudah punya akun',
   'auth.no_account': 'Buat akun baru',
-  'auth.err_name': 'Isi nama panggilan kamu',
+  'auth.err_name': 'Isi nama kamu',
   'auth.err_email_empty': 'Isi email kamu',
-  'auth.err_email_invalid': 'Sepertinya itu bukan alamat email',
+  'auth.err_email_invalid': 'Format emailnya salah',
   'auth.err_password_empty': 'Isi kata sandi kamu',
-  'auth.err_password_short': 'Pakai minimal 6 karakter',
-  'auth.reset_need_email': 'Isi email dulu, baru tekan atur ulang.',
-  'auth.reset_sent': 'Tautan atur ulang dikirim ke {email}',
+  'auth.err_password_short': 'Minimal 6 karakter',
+  'auth.reset_need_email': 'Isi emailnya dulu.',
+  'auth.reset_sent': 'Link reset dikirim ke {email}',
   'auth.sign_out': 'Keluar',
 
   // --------------------------------------------------------- onboarding
   'onboarding.hi': 'Hai {name}',
   'onboarding.blurb':
-      'Uang itu dibagi, jadi aplikasinya juga. Mulai rumah tangga dan undang '
-          'pasangan kamu, atau gabung ke yang sudah dia buat.',
+      'Buat rumah tangga dan undang pasangan kamu, atau gabung ke yang sudah '
+          'dia buat.',
   'onboarding.start': 'Mulai rumah tangga kami',
-  'onboarding.start_blurb':
-      'Buat ruang bersama, lalu tunjukkan kode QR ke pasangan kamu.',
+  'onboarding.start_blurb': 'Nanti tunjukkan kode QR-nya ke pasangan kamu.',
   'onboarding.join': 'Gabung dengan pasangan',
-  'onboarding.join_blurb':
-      'Pindai kode QR dia, atau ketik kode undangan yang dia kirim.',
+  'onboarding.join_blurb': 'Scan kode QR dia, atau ketik kodenya.',
   'onboarding.name_household': 'Beri nama rumah tangga',
   'onboarding.household_name_hint': 'Nama rumah tangga',
   'onboarding.currency': 'MATA UANG',
@@ -154,30 +180,29 @@ const Map<String, String> _id = {
   'invite.title': 'Undang pasangan',
   'invite.blurb':
       'Minta dia buka Family Money, pilih "Gabung dengan pasangan", lalu '
-          'arahkan kameranya ke sini.',
+          'arahkan kamera ke sini.',
   'invite.or_type': 'ATAU KETIK KODE INI',
   'invite.copy': 'Salin kode',
   'invite.copied': 'Kode disalin',
   'invite.new_code': 'Kode baru',
   'invite.expiry':
-      'Sekali pakai, dan hangus dalam 24 jam. Siapa pun yang punya kodenya '
-          'bisa gabung, jadi kirim langsung ke dia.',
-  'invite.connected': 'Kalian sudah terhubung.',
+      'Sekali pakai, hangus dalam 24 jam. Kirim langsung ke dia saja.',
+  'invite.connected': 'Sudah terhubung.',
 
   // --------------------------------------------------------------- join
   'join.title': 'Gabung dengan pasangan',
-  'join.tap_to_scan': 'Ketuk untuk pindai kodenya',
+  'join.tap_to_scan': 'Ketuk untuk scan',
   'join.stop_camera': 'Matikan kamera',
   'join.or': 'ATAU',
   'join.enter_code': 'Masukkan kode undangan',
-  'join.enter_code_blurb': 'Delapan karakter, dari layar ponsel pasangan kamu.',
+  'join.enter_code_blurb': 'Delapan karakter, ada di layar pasangan kamu.',
   'join.camera_unavailable': 'Kamera tidak bisa dipakai.',
-  'join.still_type': '{message}\n\nKamu tetap bisa mengetik kodenya di bawah.',
+  'join.still_type': '{message}\n\nKodenya bisa diketik di bawah.',
   'join.cta': 'Gabung rumah tangga',
   'join.confirm_title': 'Gabung ke rumah tangga ini?',
   'join.confirm_body':
-      '{name} mengundang kamu ke "{household}". Kalian berdua akan melihat '
-          'semua anggaran dan semua pengeluaran di dalamnya.',
+      '{name} mengundang kamu ke "{household}". Kalian berdua bisa lihat '
+          'semua anggaran dan pengeluaran di dalamnya.',
   'join.cta_short': 'Gabung',
 
   // -------------------------------------------------------------- shell
@@ -192,45 +217,42 @@ const Map<String, String> _id = {
   // ---------------------------------------------------------- dashboard
   'dashboard.subtitle': 'Ringkasan bersama',
   'dashboard.connect': 'Hubungkan pasangan kamu',
-  'dashboard.connect_blurb':
-      'Tunjukkan kode QR supaya kalian melihat angka yang sama.',
+  'dashboard.connect_blurb': 'Tunjukkan kode QR-nya biar angkanya sama.',
   'dashboard.your_budgets': 'Anggaran kamu',
   'dashboard.accumulated': 'Total anggaran',
   'dashboard.their_budgets': 'Anggaran {name}',
   'dashboard.who_spent': 'Siapa belanja apa',
-  'dashboard.where_went': 'Ke mana perginya',
+  'dashboard.where_went': 'Uangnya ke mana',
   'dashboard.latest': 'Terbaru',
   'dashboard.other': 'Lainnya ({count})',
-  'dashboard.left_to_spend': 'SISA UNTUK DIBELANJAKAN',
-  'dashboard.over_budget_by': 'LEBIH DARI ANGGARAN',
+  'dashboard.left_to_spend': 'SISA',
+  'dashboard.over_budget_by': 'LEWAT ANGGARAN',
   'dashboard.you_control': 'Kamu yang pegang ini',
-  'dashboard.ahead_of_pace': 'Lebih cepat dari seharusnya',
-  'dashboard.per_day_left': '{amount}/hari tersisa',
+  'dashboard.per_day_left': 'Sisa {amount}/hari',
   'dashboard.spent_of': '{spent} dari {planned}',
-  'dashboard.spent_of_both': '{spent} terpakai dari {planned} berdua',
-  'dashboard.spent_of_solo': '{spent} terpakai dari {planned}',
+  'dashboard.spent_of_both': '{spent} kepakai dari {planned} berdua',
+  'dashboard.spent_of_solo': '{spent} kepakai dari {planned}',
   'dashboard.yours': 'Punya kamu',
   'dashboard.theirs': 'Punya {name}',
   'dashboard.put_aside': 'Ditabung bulan ini',
   'dashboard.entries_one': '{count} catatan bulan ini',
   'dashboard.entries_many': '{count} catatan bulan ini',
   'dashboard.to_confirm': '{count} perlu disetujui',
-  'dashboard.moved_in': '{amount} masuk · diatur di {base}',
-  'dashboard.moved_out': '{amount} keluar · diatur di {base}',
+  'dashboard.moved_in': '{amount} masuk · awalnya {base}',
+  'dashboard.moved_out': '{amount} keluar · awalnya {base}',
   'dashboard.no_budget_title': 'Kamu belum pegang anggaran',
   'dashboard.no_budget_blurb':
       'Pengeluaran diambil dari anggaran yang kamu pegang. Anggaran {name} '
-          'bisa kamu lihat, tapi bukan untuk kamu belanjakan.',
+          'cuma bisa kamu lihat.',
   'dashboard.no_budget_blurb_solo':
-      'Pengeluaran diambil dari anggaran yang kamu pegang. Buat satu dulu '
-          'untuk mulai mencatat.',
+      'Pengeluaran diambil dari anggaran yang kamu pegang. Buat satu dulu.',
   'dashboard.request_from': 'Minta uang ke {name}',
   'dashboard.create_my_budget': 'Buat anggaran saya sendiri',
-  'dashboard.see_not_spend': 'Bisa dilihat, tidak bisa dibelanjakan.',
+  'dashboard.see_not_spend': 'Cuma bisa dilihat.',
   'dashboard.request_money': 'Minta uang',
   'dashboard.target_of': 'Target {amount}',
   'dashboard.left_of': '{amount} sisa dari {planned}',
-  'dashboard.over_of': '{amount} lebih dari {planned}',
+  'dashboard.over_of': 'Lewat {amount} dari {planned}',
   'dashboard.saving_of': '{spent} dari target {planned}',
 
   // ------------------------------------------------------------ budgets
@@ -240,17 +262,16 @@ const Map<String, String> _id = {
   'budgets.new_budget': 'Anggaran baru',
   'budgets.none_title': 'Belum ada anggaran untuk {month}',
   'budgets.none_blurb':
-      'Tentukan rencana belanja kalian, bagi jadi beberapa kategori, lalu '
-          'kalian berdua bisa mulai mencatat.',
+      'Tentukan rencana belanjanya, bagi ke kategori, lalu mulai catat.',
   'budgets.create': 'Buat anggaran',
   'budgets.copy_from': 'Salin dari {month}',
-  'budgets.nothing_to_copy': 'Tidak ada milik kamu untuk disalin dari {month}.',
+  'budgets.nothing_to_copy': 'Tidak ada anggaran kamu di {month}.',
   'budgets.copied_one': '{count} anggaran disalin.',
   'budgets.copied_many': '{count} anggaran disalin.',
   'budgets.categories_one': '{count} kategori',
   'budgets.categories_many': '{count} kategori',
   'budgets.awaiting': '{count} menunggu persetujuan',
-  'budgets.over_allocated': 'Pembagian melebihi rencana',
+  'budgets.over_allocated': 'Pembagiannya kelebihan',
   'budgets.unallocated': '{amount} belum dibagi',
   'budgets.over_spent': 'Sudah lewat anggaran',
   'budgets.you_control': 'Kamu yang pegang ini',
@@ -264,18 +285,17 @@ const Map<String, String> _id = {
   'budget_editor.monthly': 'Bulanan',
   'budget_editor.saving': 'Tabungan',
   'budget_editor.monthly_blurb': 'Diulang tiap bulan. Ini untuk {month}.',
-  'budget_editor.saving_blurb':
-      'Terbawa dari bulan ke bulan sampai targetnya tercapai.',
+  'budget_editor.saving_blurb': 'Dikumpulkan sampai targetnya tercapai.',
   'budget_editor.amount': 'JUMLAH',
   'budget_editor.target': 'TARGET',
   'budget_editor.add_target_date': 'Tambah tanggal target (opsional)',
   'budget_editor.by_date': 'Sebelum {date}',
   'budget_editor.who_controls': 'SIAPA YANG PEGANG',
   'budget_editor.who_controls_blurb':
-      'Yang pegang menentukan kategorinya. Kalian berdua tetap melihat '
-          'semuanya, tapi hanya dia yang bisa belanja dari anggaran ini.',
+      'Yang pegang menentukan kategorinya, dan cuma dia yang bisa belanja '
+          'dari sini. Kalian berdua tetap bisa lihat.',
   'budget_editor.err_name': 'Beri nama anggarannya.',
-  'budget_editor.err_amount': 'Isi jumlah lebih dari nol.',
+  'budget_editor.err_amount': 'Jumlahnya harus lebih dari nol.',
 
   // --------------------------------------------------- category editor
   'category_editor.new': 'Kategori baru',
@@ -283,14 +303,13 @@ const Map<String, String> _id = {
   'category_editor.in_budget': 'Di dalam {budget}',
   'category_editor.name_hint': 'Nama kategori',
   'category_editor.allocation': 'PEMBAGIAN',
-  'category_editor.will_ask':
-      '{name} akan diminta menyetujui pembagian ini.',
+  'category_editor.will_ask': '{name} harus setuju dulu.',
   'category_editor.add': 'Tambah kategori',
   'category_editor.send': 'Kirim untuk disetujui',
   'category_editor.save_and_ask': 'Simpan dan minta lagi',
-  'category_editor.sent_to': 'Dikirim ke {name} untuk disetujui.',
+  'category_editor.sent_to': 'Sudah dikirim ke {name}.',
   'category_editor.err_name': 'Beri nama kategorinya.',
-  'category_editor.err_amount': 'Bagi jumlah lebih dari nol.',
+  'category_editor.err_amount': 'Jumlahnya harus lebih dari nol.',
 
   // ----------------------------------------------------- budget detail
   'status.pending': 'Menunggu persetujuan',
@@ -298,9 +317,9 @@ const Map<String, String> _id = {
   'status.rejected': 'Ditolak',
   'detail.of_planned': 'dari {amount}',
   'detail.of_target': 'dari target {amount}',
-  'detail.where_it_stands': 'UANGNYA BERDIRI DI SINI',
+  'detail.where_it_stands': 'RINCIAN',
   'detail.already_spent': 'Sudah dibelanjakan',
-  'detail.in_categories': 'Masih dijatah kategori',
+  'detail.in_categories': 'Masih di kategori',
   'detail.not_carved_up': 'Belum dibagi',
   'detail.spent': 'TERPAKAI',
   'detail.put_aside': 'DITABUNG',
@@ -313,10 +332,10 @@ const Map<String, String> _id = {
   'detail.you_control_here': 'Kamu yang menentukan kategori di sini',
   'detail.categories': 'Kategori',
   'detail.over_allocated':
-      'Kategori berjumlah {allocated}, lebih dari rencana {planned}.',
+      'Total kategori {allocated}, padahal anggarannya {planned}.',
   'detail.no_categories': 'Belum ada kategori',
   'detail.no_categories_yours':
-      'Bagi anggaran ini supaya kalian tahu uangnya untuk apa.',
+      'Bagi anggaran ini biar jelas uangnya untuk apa.',
   'detail.no_categories_theirs': '{name} belum membagi anggaran ini.',
   'detail.add_category': 'Tambah kategori',
   'detail.uncategorised': 'Pengeluaran tanpa kategori',
@@ -329,14 +348,14 @@ const Map<String, String> _id = {
   'detail.delete_title': 'Hapus {name}?',
   'detail.delete_body':
       'Kategori dan semua pengeluaran di dalamnya ikut terhapus, untuk kalian '
-          'berdua. Ini tidak bisa dibatalkan.',
+          'berdua. Tidak bisa dibatalkan.',
   'detail.remove_category_title': 'Hapus {name}?',
   'detail.remove_category_spent':
-      'Pengeluarannya tetap ada di catatan, hanya tidak berkategori lagi.',
-  'detail.remove_category_empty': 'Belum ada yang dibelanjakan dari kategori ini.',
+      'Pengeluarannya tetap ada di catatan, tapi tanpa kategori.',
+  'detail.remove_category_empty':
+      'Belum ada yang dibelanjakan dari kategori ini.',
   'detail.not_found': 'Anggaran tidak ditemukan',
-  'detail.not_found_blurb':
-      'Mungkin sudah dihapus, atau milik bulan yang lain.',
+  'detail.not_found_blurb': 'Mungkin sudah dihapus, atau ada di bulan lain.',
 
   // ---------------------------------------------------- expense editor
   'expense.new': 'Pengeluaran baru',
@@ -348,11 +367,11 @@ const Map<String, String> _id = {
   'expense.nothing_yours': 'Tidak ada milik kamu untuk dibelanjakan',
   'expense.nothing_yours_blurb':
       'Pengeluaran diambil dari anggaran yang kamu pegang. Buat satu, atau '
-          'minta pasangan kamu memindahkan sebagian.',
+          'minta ke pasangan kamu.',
   'expense.delete_title': 'Hapus pengeluaran ini?',
   'expense.delete_body':
-      'Catatan ini hilang untuk kalian berdua dan totalnya kembali turun.',
-  'expense.err_amount': 'Isi jumlah lebih dari nol.',
+      'Catatan ini hilang untuk kalian berdua. Totalnya ikut turun.',
+  'expense.err_amount': 'Jumlahnya harus lebih dari nol.',
   'expense.err_budget': 'Pilih anggaran mana yang dipakai.',
 
   // ------------------------------------------------------------- ledger
@@ -362,8 +381,7 @@ const Map<String, String> _id = {
   'ledger.entries_many': '{count} catatan',
   'ledger.empty': 'Belum ada yang dicatat',
   'ledger.empty_blurb':
-      'Ketuk tombol + untuk mencatat pengeluaran. Pasangan kamu langsung '
-          'melihatnya.',
+      'Ketuk + untuk mencatat pengeluaran. Pasangan kamu langsung lihat.',
   'ledger.today': 'HARI INI',
   'ledger.yesterday': 'KEMARIN',
 
@@ -371,19 +389,17 @@ const Map<String, String> _id = {
   'inbox.title': 'Kotak masuk',
   'inbox.empty': 'Tidak ada yang perlu disetujui',
   'inbox.empty_unpaired':
-      'Begitu pasangan kamu gabung, pembagian anggaran dan permintaan uang '
-          'akan muncul di sini.',
+      'Kalau pasangan kamu sudah gabung, pembagian anggaran dan permintaan '
+          'uang muncul di sini.',
   'inbox.empty_blurb':
-      'Pembagian yang perlu disepakati dan permintaan memindahkan uang sama-'
-          'sama muncul di sini.',
+      'Pembagian anggaran dan permintaan uang muncul di sini.',
   'inbox.waiting_on_you': 'Menunggu kamu',
   'inbox.waiting_on_partner': 'Menunggu pasangan',
   'inbox.money_request': 'Permintaan uang',
-  'inbox.asking_for':
-      '{name} minta uang dari {from}, untuk masuk ke {to}.',
+  'inbox.asking_for': '{name} minta uang dari {from}, masuk ke {to}.',
   'inbox.leaves': 'Sisa {amount}',
-  'inbox.more_than_you_have': 'Lebih dari yang ada',
-  'inbox.would_go_over': 'Menyetujuinya akan membuat {budget} melebihi anggaran.',
+  'inbox.more_than_you_have': 'Lebih dari sisanya',
+  'inbox.would_go_over': 'Kalau disetujui, {budget} jadi lewat anggaran.',
   'inbox.send_money': 'Kirim uang',
   'inbox.money_moved': 'Uang dipindahkan',
   'inbox.declined': 'Ditolak',
@@ -391,14 +407,14 @@ const Map<String, String> _id = {
   'inbox.decline_title': 'Tolak',
   'inbox.decline_hint': 'Beri alasan (opsional)',
   'inbox.withdraw': 'Tarik',
-  'inbox.editing_replaces': 'Mengubah kategori menggantikan permintaan ini.',
+  'inbox.editing_replaces':
+      'Kalau kategorinya diubah, permintaan ini diganti.',
   'inbox.waiting_from': '{amount} dari {budget} · menunggu {name}',
   'inbox.waiting_amount': '{amount} · menunggu {name}',
-  'inbox.vs_before': '{amount} dari sebelumnya',
+  'inbox.vs_before': 'Sebelumnya {amount}',
   'inbox.note':
-      'Pembagian yang belum disetujui tetap dihitung dalam rencana, jadi '
-          'angkanya mencerminkan niat kalian sambil dibicarakan. Uang baru '
-          'pindah setelah permintaan disetujui.',
+      'Pembagian yang belum disetujui sudah ikut dihitung. Uangnya baru '
+          'pindah setelah disetujui.',
 
   // ------------------------------------------------------ request money
   'request.title': 'Minta uang',
@@ -410,22 +426,23 @@ const Map<String, String> _id = {
   'request.lands_in': 'MASUK KE',
   'request.name_budget_hint': 'Beri nama anggaran kamu sendiri',
   'request.creates_budget':
-      'Kamu belum pegang apa-apa, jadi ini membuatkan anggaran untuk menerimanya.',
+      'Kamu belum pegang anggaran, jadi dibuatkan satu untuk menampungnya.',
   'request.partner_confirms':
-      '{name} menyetujuinya di kotak masuk. Kalau dia setuju, uangnya pindah '
-          'ke anggaran kamu — kamu tetap tidak belanja dari punya dia.',
+      '{name} menyetujuinya di kotak masuk. Kalau setuju, uangnya pindah ke '
+          'anggaran kamu.',
   'request.send': 'Kirim permintaan',
   'request.left_in': '{amount} tersisa di {budget}',
-  'request.err_source': 'Pilih dari anggaran yang mana.',
-  'request.err_amount': 'Isi jumlah lebih dari nol.',
-  'request.err_too_much': 'Hanya ada {amount} tersisa di {budget}.',
-  'request.err_name': 'Beri nama anggaran tujuannya.',
+  'request.err_source': 'Pilih mau minta dari anggaran mana.',
+  'request.err_amount': 'Jumlahnya harus lebih dari nol.',
+  'request.err_too_much': 'Di {budget} cuma sisa {amount}.',
+  'request.err_name': 'Beri nama anggarannya.',
   'request.err_destination': 'Pilih uangnya mau masuk ke mana.',
   'request.sent_to': 'Dikirim ke {name}.',
   'request.none_title': 'Belum ada yang bisa diminta',
   'request.none_unpaired':
       'Hubungkan pasangan kamu dulu, baru bisa minta uang ke dia.',
-  'request.none_blurb': '{name} belum punya anggaran bulanan untuk dipindahkan.',
+  'request.none_blurb':
+      '{name} belum punya anggaran bulanan untuk dipindahkan.',
 
   // ----------------------------------------------------------- settings
   'settings.title': 'Pengaturan',
@@ -439,16 +456,16 @@ const Map<String, String> _id = {
   'settings.month_first': 'Tanggal 1 (bulan kalender)',
   'settings.month_day': 'Tanggal {day}',
   'settings.month_blurb':
-      'Kalau kalian mengatur anggaran dari tanggal gajian, bukan tanggal 1, '
-          'pilih harinya di sini. Pengeluaran otomatis masuk ke bulan yang tepat.',
+      'Kalau anggaran kalian mulai dari tanggal gajian, pilih tanggalnya di '
+          'sini. Pengeluaran otomatis masuk ke bulan yang benar.',
   'settings.language': 'Bahasa',
   'settings.preferences': 'Preferensi',
   'settings.account': 'Akun',
   'settings.leave': 'Keluar dari rumah tangga',
   'settings.leave_title': 'Keluar dari rumah tangga ini?',
   'settings.leave_body':
-      'Kamu berhenti melihat anggaran dan catatan bersama. Semuanya tetap ada '
-          'pada pasangan kamu, dan kamu bisa diundang lagi.',
+      'Kamu tidak bisa lihat anggaran dan catatan bersama lagi. Semuanya '
+          'tetap ada di pasangan kamu, dan kamu bisa diundang lagi.',
   'settings.leave_cta': 'Keluar',
   'settings.your_name': 'Nama kamu',
   'settings.household_name': 'Nama rumah tangga',
@@ -457,46 +474,39 @@ const Map<String, String> _id = {
   'chart.range_day': 'Harian',
   'chart.range_month': 'Bulanan',
   'chart.range_year': 'Tahunan',
-  'chart.left_in': 'Sisa di {name} \u2014 anggaran kamu',
-  'chart.over_in': 'Lebih di {name} \u2014 anggaran kamu',
-  'chart.left_household': 'Sisa di seluruh anggaran rumah tangga',
-  'chart.over_household': 'Lebih dari seluruh anggaran rumah tangga',
+  'chart.left_in': 'Sisa di {name}, anggaran kamu',
+  'chart.over_in': 'Lewat di {name}, anggaran kamu',
+  'chart.left_household': 'Sisa semua anggaran rumah tangga',
+  'chart.over_household': 'Lewat dari semua anggaran rumah tangga',
   'chart.budget_of': 'Anggaran {amount}',
   'chart.projection_ok':
-      'Dengan laju ini kamu selesai di {amount} \u2014 sisa {left}.',
+      'Kalau segini terus, habisnya {amount}. Sisa {left}.',
   'chart.projection_over':
-      'Dengan laju ini kamu selesai di {amount} \u2014 lebih {over}.',
+      'Kalau segini terus, habisnya {amount}. Lewat {over}.',
   'chart.projection_none': 'Belum ada yang dicatat bulan ini.',
-  'chart.fix_daily': 'Turunkan ke {amount}/hari supaya pas.',
+  'chart.fix_daily': 'Turunkan ke {amount}/hari biar pas.',
   'chart.fix_stop': 'Anggarannya sudah habis.',
-  'chart.daily_note_none': 'Jatah harian {amount}. Belum ada hari yang lewat.',
-  'chart.daily_note_one': 'Jatah harian {amount}. {count} hari lewat jatah.',
-  'chart.daily_note_many': 'Jatah harian {amount}. {count} hari lewat jatah.',
+  'chart.daily_note_none': 'Jatah {amount}/hari. Belum ada yang lewat.',
+  'chart.daily_note_one': 'Jatah {amount}/hari. {count} hari lewat jatah.',
+  'chart.daily_note_many': 'Jatah {amount}/hari. {count} hari lewat jatah.',
   'chart.year_note': '{amount} terpakai sepanjang {year}.',
   'chart.legend_spent': 'Terpakai',
-  'chart.legend_pace': 'Laju ideal',
+  'chart.legend_pace': 'Seharusnya',
   'chart.legend_projection': 'Perkiraan',
-  'chart.a11y':
-      'Grafik {range}. {spent} terpakai dari anggaran {budget}.',
+  'chart.a11y': 'Grafik {range}. {spent} terpakai dari anggaran {budget}.',
 
   // -------------------------------------------------------------- errors
-  'error.permission_denied':
-      'Firebase menolak permintaan ini. Biasanya karena aturan keamanan '
-          'belum dipasang di Firebase Console \u2014 buka tab Rules, tempel '
-          'isi firebase/firestore.rules, lalu Publish. Kalau sudah dipasang, '
-          'berarti ini memang bukan milik kamu.',
-  'error.offline': 'Tidak bisa menghubungi Firebase. Cek koneksi kamu; '
-      'catatan yang sudah dibuat akan terkirim sendiri nanti.',
+  'error.permission_denied': 'Kamu tidak punya izin untuk ini.',
+  'error.offline':
+      'Tidak ada koneksi. Catatan yang sudah dibuat terkirim sendiri nanti.',
   'error.signed_out': 'Sesi kamu habis. Masuk lagi, ya.',
   'error.not_found': 'Datanya sudah tidak ada. Mungkin baru dihapus.',
   'error.already_exists': 'Datanya sudah ada.',
-  'error.needs_index':
-      'Firestore butuh index untuk query ini. Buka log error-nya \u2014 ada '
-          'tautan untuk membuatnya sekali klik.',
-  'error.quota': 'Kuota Firebase habis untuk hari ini. Coba lagi besok.',
+  'error.needs_index': 'Belum bisa menampilkan ini. Coba lagi nanti.',
+  'error.quota': 'Server sedang penuh. Coba lagi besok.',
   'error.email_taken': 'Email itu sudah dipakai.',
-  'error.email_invalid': 'Emailnya tidak valid.',
-  'error.password_weak': 'Kata sandinya terlalu pendek. Minimal 6 huruf.',
+  'error.email_invalid': 'Format emailnya salah.',
+  'error.password_weak': 'Kata sandinya terlalu pendek. Minimal 6 karakter.',
   'error.credentials': 'Email atau kata sandinya salah.',
   'error.too_many': 'Terlalu banyak percobaan. Tunggu sebentar.',
   'error.unknown': 'Ada yang tidak beres. Coba lagi.',
@@ -512,8 +522,8 @@ const Map<String, String> _id = {
   'category_editor.none_left':
       'Semua anggaran sudah dibagi. Kurangi kategori lain dulu.',
   'category_editor.err_over':
-      'Kelebihan {over}. Di {budget} cuma sisa {headroom} yang belum dibagi \u2014 '
-          'kurangi kategori lain dulu, atau naikkan jumlah anggarannya.',
+      'Kelebihan {over}. Di {budget} cuma sisa {headroom}. Kurangi kategori '
+          'lain, atau naikkan anggarannya.',
 
   'detail.taken_out': 'Diambil lagi',
   'detail.income_added': '{amount} masuk ke anggaran ini.',
@@ -523,8 +533,7 @@ const Map<String, String> _id = {
   'detail.record_withdrawal': 'Ambil',
 
   'inbox.all_allocated':
-      '{budget} sudah dibagi habis ke kategori. Nanti kamu pilih kategori '
-          'mana yang dikurangi.',
+      '{budget} sudah dibagi habis. Nanti pilih kategori mana yang dikurangi.',
   'inbox.take_from_title': 'Ambil dari kategori mana?',
   'inbox.take_from_blurb':
       '{amount} akan dikurangi dari salah satu kategori di {budget}.',
@@ -532,8 +541,8 @@ const Map<String, String> _id = {
   'inbox.no_categories_to_take_from':
       'Tidak ada kategori yang bisa dikurangi di anggaran ini.',
 
-  'history.title': 'Riwayat dana',
-  'history.on_this_budget': 'Perpindahan dana',
+  'history.title': 'Riwayat uang',
+  'history.on_this_budget': 'Uang yang pindah',
   'history.received_from': 'Terima dari {name}',
   'history.gave_to': 'Kasih ke {name}',
   'history.refused_by': '{name} menolak',
@@ -551,61 +560,56 @@ const Map<String, String> _id = {
   'delete.title': 'Hapus akun',
   'delete.talk_title': 'Sebelum lanjut',
   'delete.talk_body':
-      'Kalau ada yang berat antara kamu dan {name}, aplikasi bukan tempat '
-          'menyelesaikannya. Uang sering jadi bentuk dari hal lain \u2014 rasa '
-          'capek, rasa tidak didengar, rasa sendirian.\n\nCoba bicara dulu, '
-          'pelan-pelan, di waktu yang tenang. Mengakhiri sesuatu jarang jadi '
-          'jawabannya. Tombol ini akan tetap ada kalau memang itu yang kamu '
-          'pilih nanti.',
+      'Kalau ada yang berat antara kamu dan {name}, coba bicarakan dulu di '
+          'waktu yang tenang. Sering kali soalnya bukan uang.\n\nTombol ini '
+          'tetap ada kalau nanti memang itu yang kamu mau.',
   'delete.what_happens': 'Yang akan terjadi',
   'delete.point_profile': 'Nama, email, dan profil kamu dihapus.',
   'delete.point_signin': 'Kamu tidak bisa masuk lagi dengan akun ini.',
   'delete.point_fresh':
-      'Nanti kamu bisa daftar lagi pakai email yang sama, tapi jadi akun baru yang kosong \u2014 tidak ada yang kembali.',
+      'Nanti kamu bisa daftar lagi pakai email yang sama, tapi isinya kosong. '
+          'Tidak ada yang kembali.',
   'delete.point_solo':
       'Semua anggaran, catatan, dan tabungan kamu ikut terhapus.',
   'delete.point_leave': 'Kamu keluar dari rumah tangga bersama {name}.',
   'delete.point_partner_keeps':
-      '{name} tetap menyimpan anggaran dan catatan bersama \u2014 itu '
-          'catatan dia juga.',
-  'delete.point_forever': 'Tidak bisa dibatalkan. Tidak ada cadangan.',
+      '{name} tetap punya anggaran dan catatan bersama. Itu catatan dia juga.',
+  'delete.point_forever': 'Tidak bisa dibatalkan.',
   'delete.shared_title': 'Catatan bersama',
   'delete.shared_blurb':
       'Anggaran dan catatan bersama bukan milik kamu sendiri. Kamu bisa minta '
           'semuanya dihapus, tapi {name} yang memutuskan.',
   'delete.ask_erase': 'Minta {name} menghapus semua catatan bersama',
   'delete.ask_erase_note':
-      '{name} akan ditanya. Kalau dia menolak, catatannya tetap ada padanya.',
+      '{name} akan ditanya. Kalau dia tidak mau, catatannya tetap ada di dia.',
   'delete.confirm_title': 'Konfirmasi',
   'delete.confirm_blurb': 'Ketik {word} untuk melanjutkan.',
   'delete.confirm_word': 'HAPUS',
   'delete.err_word': 'Ketik {word} persis untuk melanjutkan.',
   'delete.final_title': 'Hapus akun kamu?',
   'delete.final_body':
-      'Ini langkah terakhir. Setelah ini akun kamu hilang dan tidak bisa '
-          'dikembalikan.',
+      'Setelah ini akun kamu hilang dan tidak bisa dikembalikan.',
   'delete.confirm_cta': 'Ya, hapus',
-  'delete.keep_account': 'Batal, simpan akun saya',
+  'delete.keep_account': 'Batal',
   'delete.cta': 'Hapus akun saya',
 
   'erase.title': '{name} sudah menghapus akunnya',
   'erase.body':
-      '{name} minta semua catatan bersama kalian ikut dihapus \u2014 anggaran, '
-          'kategori, dan seluruh catatan pengeluaran. Kamu yang memutuskan. '
-          'Kalau kamu simpan, semuanya tetap ada untuk kamu.',
+      '{name} minta semua catatan bersama kalian ikut dihapus: anggaran, '
+          'kategori, dan semua pengeluaran. Kamu yang memutuskan.',
   'erase.keep': 'Simpan catatannya',
   'erase.erase': 'Hapus semuanya',
   'erase.kept': 'Catatan bersama tetap tersimpan.',
   'erase.confirm_title': 'Hapus semua catatan bersama?',
   'erase.confirm_body':
-      'Semua anggaran, kategori, dan catatan pengeluaran kalian akan hilang '
-          'untuk selamanya. Tidak bisa dibatalkan.',
+      'Semua anggaran, kategori, dan pengeluaran kalian hilang. Tidak bisa '
+          'dibatalkan.',
   'erase.confirm_cta': 'Hapus semuanya',
 
   // ---------------------------------------------------------- app-level
-  'splash.preparing': 'Menyiapkan rumah tangga kamu\u2026',
+  'splash.preparing': 'Sebentar…',
 
-  'app.cannot_reach': 'Tidak bisa mengambil data kamu',
+  'app.cannot_reach': 'Tidak bisa memuat data kamu',
   'app.setup_title': 'Tinggal satu langkah lagi',
 };
 
@@ -631,8 +635,8 @@ const Map<String, String> _en = {
   'common.of': 'of',
 
   'auth.app_name': 'Family Money',
-  'auth.tagline': 'One shared picture of where your money goes.',
-  'auth.welcome_back': 'Welcome back.',
+  'auth.tagline': 'Track money together.',
+  'auth.welcome_back': 'Welcome back',
   'auth.name_hint': 'Your name',
   'auth.email_hint': 'Email',
   'auth.password_hint': 'Password',
@@ -641,25 +645,23 @@ const Map<String, String> _en = {
   'auth.create_account': 'Create account',
   'auth.have_account': 'I already have an account',
   'auth.no_account': 'Create an account',
-  'auth.err_name': 'Tell us what to call you',
+  'auth.err_name': 'Enter your name',
   'auth.err_email_empty': 'Enter your email',
-  'auth.err_email_invalid': 'That does not look like an email',
+  'auth.err_email_invalid': 'That email isn’t valid',
   'auth.err_password_empty': 'Enter your password',
-  'auth.err_password_short': 'Use at least 6 characters',
-  'auth.reset_need_email': 'Enter your email first, then tap reset.',
+  'auth.err_password_short': 'At least 6 characters',
+  'auth.reset_need_email': 'Enter your email first.',
   'auth.reset_sent': 'Reset link sent to {email}',
   'auth.sign_out': 'Sign out',
 
   'onboarding.hi': 'Hi {name}',
   'onboarding.blurb':
-      'Money is shared, so the app is too. Start a household and invite your '
-          'partner, or join the one they already made.',
+      'Start a household and invite your partner, or join the one they already '
+          'made.',
   'onboarding.start': 'Start our household',
-  'onboarding.start_blurb':
-      'Create the shared space, then show your partner a QR code to join it.',
+  'onboarding.start_blurb': 'You’ll get a QR code to show your partner.',
   'onboarding.join': 'Join my partner',
-  'onboarding.join_blurb':
-      'Scan their QR code, or type the invite code they send you.',
+  'onboarding.join_blurb': 'Scan their QR code, or type the code they send.',
   'onboarding.name_household': 'Name your household',
   'onboarding.household_name_hint': 'Household name',
   'onboarding.currency': 'CURRENCY',
@@ -675,24 +677,22 @@ const Map<String, String> _en = {
   'invite.copied': 'Code copied',
   'invite.new_code': 'New code',
   'invite.expiry':
-      'Single use, and it expires in 24 hours. Anyone with the code can join, '
-          'so share it directly.',
-  'invite.connected': 'You are connected.',
+      'One use, expires in 24 hours. Send it straight to them.',
+  'invite.connected': 'You’re connected.',
 
   'join.title': 'Join your partner',
-  'join.tap_to_scan': 'Tap to scan their code',
+  'join.tap_to_scan': 'Tap to scan',
   'join.stop_camera': 'Stop camera',
   'join.or': 'OR',
   'join.enter_code': 'Enter the invite code',
-  'join.enter_code_blurb':
-      'Eight characters, from the screen on your partner’s phone.',
-  'join.camera_unavailable': 'The camera is unavailable.',
-  'join.still_type': '{message}\n\nYou can still type the code below.',
+  'join.enter_code_blurb': 'Eight characters, on your partner’s screen.',
+  'join.camera_unavailable': 'The camera isn’t available.',
+  'join.still_type': '{message}\n\nYou can type the code below instead.',
   'join.cta': 'Join household',
   'join.confirm_title': 'Join this household?',
   'join.confirm_body':
-      '{name} invited you to "{household}". You will both see every budget and '
-          'every expense in it.',
+      '{name} invited you to "{household}". You’ll both see every budget and '
+          'expense in it.',
   'join.cta_short': 'Join',
 
   'shell.tab_overview': 'Overview',
@@ -704,8 +704,7 @@ const Map<String, String> _en = {
 
   'dashboard.subtitle': 'Shared overview',
   'dashboard.connect': 'Connect your partner',
-  'dashboard.connect_blurb':
-      'Show them a QR code so you both see the same numbers.',
+  'dashboard.connect_blurb': 'Show them a QR code so your numbers match.',
   'dashboard.your_budgets': 'Your budgets',
   'dashboard.accumulated': 'Accumulated budget',
   'dashboard.their_budgets': '{name}’s budgets',
@@ -713,35 +712,34 @@ const Map<String, String> _en = {
   'dashboard.where_went': 'Where it went',
   'dashboard.latest': 'Latest',
   'dashboard.other': 'Other ({count})',
-  'dashboard.left_to_spend': 'LEFT TO SPEND',
-  'dashboard.over_budget_by': 'OVER BUDGET BY',
+  'dashboard.left_to_spend': 'LEFT',
+  'dashboard.over_budget_by': 'OVER BUDGET',
   'dashboard.you_control': 'You control this',
-  'dashboard.ahead_of_pace': 'Ahead of pace',
   'dashboard.per_day_left': '{amount}/day left',
   'dashboard.spent_of': '{spent} of {planned}',
-  'dashboard.spent_of_both': '{spent} spent of {planned} across both of you',
-  'dashboard.spent_of_solo': '{spent} spent of {planned}',
+  'dashboard.spent_of_both': '{spent} of {planned}, both of you',
+  'dashboard.spent_of_solo': '{spent} of {planned}',
   'dashboard.yours': 'Yours',
   'dashboard.theirs': '{name}’s',
   'dashboard.put_aside': 'Put aside this month',
   'dashboard.entries_one': '{count} entry this month',
   'dashboard.entries_many': '{count} entries this month',
   'dashboard.to_confirm': '{count} to confirm',
-  'dashboard.moved_in': '{amount} moved in · set at {base}',
-  'dashboard.moved_out': '{amount} moved out · set at {base}',
+  'dashboard.moved_in': '{amount} in · started at {base}',
+  'dashboard.moved_out': '{amount} out · started at {base}',
   'dashboard.no_budget_title': 'You don’t control a budget yet',
   'dashboard.no_budget_blurb':
-      'Spending comes out of a budget you control. {name}’s budgets are '
-          'visible to you, but not yours to spend.',
+      'Spending comes out of a budget you control. You can only look at '
+          '{name}’s.',
   'dashboard.no_budget_blurb_solo':
-      'Spending comes out of a budget you control. Create one to start logging.',
+      'Spending comes out of a budget you control. Create one first.',
   'dashboard.request_from': 'Request money from {name}',
   'dashboard.create_my_budget': 'Create my own budget',
-  'dashboard.see_not_spend': 'You can see it, not spend from it.',
+  'dashboard.see_not_spend': 'You can only look at this one.',
   'dashboard.request_money': 'Request money',
   'dashboard.target_of': 'Target {amount}',
   'dashboard.left_of': '{amount} left of {planned}',
-  'dashboard.over_of': '{amount} over of {planned}',
+  'dashboard.over_of': '{amount} over {planned}',
   'dashboard.saving_of': '{spent} of {planned} target',
 
   'budgets.title': 'Budgets',
@@ -750,17 +748,17 @@ const Map<String, String> _en = {
   'budgets.new_budget': 'New budget',
   'budgets.none_title': 'No budgets for {month}',
   'budgets.none_blurb':
-      'Decide what you plan to spend, split it into categories, and both of you '
-          'can start logging against it.',
+      'Decide what you plan to spend, split it into categories, then start '
+          'logging.',
   'budgets.create': 'Create a budget',
   'budgets.copy_from': 'Copy from {month}',
-  'budgets.nothing_to_copy': 'Nothing of yours to copy from {month}.',
+  'budgets.nothing_to_copy': 'None of your budgets are in {month}.',
   'budgets.copied_one': 'Copied {count} budget.',
   'budgets.copied_many': 'Copied {count} budgets.',
   'budgets.categories_one': '{count} category',
   'budgets.categories_many': '{count} categories',
   'budgets.awaiting': '{count} awaiting confirmation',
-  'budgets.over_allocated': 'Allocated over plan',
+  'budgets.over_allocated': 'Split over plan',
   'budgets.unallocated': '{amount} unallocated',
   'budgets.over_spent': 'Over budget',
   'budgets.you_control': 'You control this',
@@ -773,41 +771,40 @@ const Map<String, String> _en = {
   'budget_editor.monthly': 'Monthly',
   'budget_editor.saving': 'Saving',
   'budget_editor.monthly_blurb': 'Resets every month. This one is for {month}.',
-  'budget_editor.saving_blurb':
-      'Carries over month to month until it reaches the target.',
+  'budget_editor.saving_blurb': 'Builds up until it reaches the target.',
   'budget_editor.amount': 'AMOUNT',
   'budget_editor.target': 'TARGET',
   'budget_editor.add_target_date': 'Add a target date (optional)',
   'budget_editor.by_date': 'By {date}',
   'budget_editor.who_controls': 'WHO CONTROLS IT',
   'budget_editor.who_controls_blurb':
-      'The controller sets the categories. You both see everything, but only '
-          'they can spend from this budget.',
+      'Whoever controls it sets the categories, and only they can spend from '
+          'it. You both still see everything.',
   'budget_editor.err_name': 'Give the budget a name.',
-  'budget_editor.err_amount': 'Enter an amount greater than zero.',
+  'budget_editor.err_amount': 'The amount has to be more than zero.',
 
   'category_editor.new': 'New category',
   'category_editor.edit': 'Edit category',
   'category_editor.in_budget': 'In {budget}',
   'category_editor.name_hint': 'Category name',
   'category_editor.allocation': 'ALLOCATION',
-  'category_editor.will_ask': '{name} gets asked to confirm this allocation.',
+  'category_editor.will_ask': '{name} has to agree to this first.',
   'category_editor.add': 'Add category',
   'category_editor.send': 'Send for confirmation',
   'category_editor.save_and_ask': 'Save and ask again',
-  'category_editor.sent_to': 'Sent to {name} to confirm.',
+  'category_editor.sent_to': 'Sent to {name}.',
   'category_editor.err_name': 'Name the category.',
-  'category_editor.err_amount': 'Allocate an amount greater than zero.',
+  'category_editor.err_amount': 'The amount has to be more than zero.',
 
   'status.pending': 'Awaiting confirmation',
   'status.approved': 'Confirmed',
   'status.rejected': 'Declined',
   'detail.of_planned': 'of {amount}',
   'detail.of_target': 'of a {amount} target',
-  'detail.where_it_stands': 'WHERE THE MONEY STANDS',
+  'detail.where_it_stands': 'BREAKDOWN',
   'detail.already_spent': 'Already spent',
-  'detail.in_categories': 'Still held by categories',
-  'detail.not_carved_up': 'Not carved up yet',
+  'detail.in_categories': 'Held in categories',
+  'detail.not_carved_up': 'Not split yet',
   'detail.spent': 'SPENT',
   'detail.put_aside': 'PUT ASIDE',
   'detail.planned': 'Planned',
@@ -819,30 +816,30 @@ const Map<String, String> _en = {
   'detail.you_control_here': 'You control the categories here',
   'detail.categories': 'Categories',
   'detail.over_allocated':
-      'Categories add up to {allocated}, which is more than the {planned} plan.',
+      'The categories add up to {allocated}, but the budget is {planned}.',
   'detail.no_categories': 'No categories yet',
   'detail.no_categories_yours':
-      'Split this budget so you both know what the money is meant for.',
-  'detail.no_categories_theirs': '{name} has not split this budget yet.',
+      'Split this budget so it’s clear what the money is for.',
+  'detail.no_categories_theirs': '{name} hasn’t split this budget yet.',
   'detail.add_category': 'Add a category',
   'detail.uncategorised': 'Uncategorised spending',
   'detail.activity': 'Activity ({count})',
   'detail.nothing_spent': 'Nothing spent from this budget yet',
-  'detail.nothing_spent_yours': 'Entries you file against it show up here.',
-  'detail.nothing_spent_theirs': 'Entries {name} files against it show up here.',
+  'detail.nothing_spent_yours': 'Entries you add show up here.',
+  'detail.nothing_spent_theirs': 'Entries {name} adds show up here.',
   'detail.edit_budget': 'Edit budget',
   'detail.delete_budget': 'Delete budget',
   'detail.delete_title': 'Delete {name}?',
   'detail.delete_body':
-      'Its categories and every expense filed under it are deleted too, for '
-          'both of you. This cannot be undone.',
+      'Its categories and every expense in it go too, for both of you. This '
+          'can’t be undone.',
   'detail.remove_category_title': 'Remove {name}?',
   'detail.remove_category_spent':
-      'The expenses stay in the ledger but stop being categorised.',
+      'The expenses stay in the ledger, just without a category.',
   'detail.remove_category_empty': 'Nothing has been spent from it yet.',
   'detail.not_found': 'Budget not found',
   'detail.not_found_blurb':
-      'It may have been deleted, or it belongs to another month.',
+      'It may have been deleted, or it’s in another month.',
 
   'expense.new': 'New expense',
   'expense.edit': 'Edit expense',
@@ -853,11 +850,11 @@ const Map<String, String> _en = {
   'expense.nothing_yours': 'Nothing of yours to spend from',
   'expense.nothing_yours_blurb':
       'An expense comes out of a budget you control. Create one, or ask your '
-          'partner to move some money across.',
+          'partner for some.',
   'expense.delete_title': 'Delete this expense?',
   'expense.delete_body':
-      'It disappears for both of you and the totals go back down.',
-  'expense.err_amount': 'Enter an amount greater than zero.',
+      'It goes for both of you. The totals come back down.',
+  'expense.err_amount': 'The amount has to be more than zero.',
   'expense.err_budget': 'Pick which budget this comes out of.',
 
   'ledger.title': 'Ledger',
@@ -866,25 +863,22 @@ const Map<String, String> _en = {
   'ledger.entries_many': '{count} entries',
   'ledger.empty': 'Nothing recorded yet',
   'ledger.empty_blurb':
-      'Tap the + button to log what you spent. Your partner sees it straight '
-          'away.',
+      'Tap + to log what you spent. Your partner sees it straight away.',
   'ledger.today': 'TODAY',
   'ledger.yesterday': 'YESTERDAY',
 
   'inbox.title': 'Inbox',
   'inbox.empty': 'Nothing to confirm',
   'inbox.empty_unpaired':
-      'Once your partner joins, budget allocations and money requests will come '
-          'here.',
-  'inbox.empty_blurb':
-      'Allocations to agree to, and requests to move money, both land here.',
+      'Once your partner joins, budget splits and money requests turn up here.',
+  'inbox.empty_blurb': 'Budget splits and money requests turn up here.',
   'inbox.waiting_on_you': 'Waiting on you',
   'inbox.waiting_on_partner': 'Waiting on your partner',
   'inbox.money_request': 'Money request',
   'inbox.asking_for': '{name} is asking for money out of {from}, into {to}.',
   'inbox.leaves': 'Leaves {amount}',
-  'inbox.more_than_you_have': 'More than you have',
-  'inbox.would_go_over': 'Approving would put {budget} over budget.',
+  'inbox.more_than_you_have': 'More than is left',
+  'inbox.would_go_over': 'Approving this puts {budget} over budget.',
   'inbox.send_money': 'Send money',
   'inbox.money_moved': 'Money moved',
   'inbox.declined': 'Declined',
@@ -892,14 +886,14 @@ const Map<String, String> _en = {
   'inbox.decline_title': 'Decline',
   'inbox.decline_hint': 'Say why (optional)',
   'inbox.withdraw': 'Withdraw',
-  'inbox.editing_replaces': 'Editing the category replaces this request.',
+  'inbox.editing_replaces':
+      'Changing the category replaces this request.',
   'inbox.waiting_from': '{amount} from {budget} · waiting on {name}',
   'inbox.waiting_amount': '{amount} · waiting on {name}',
-  'inbox.vs_before': '{amount} vs before',
+  'inbox.vs_before': 'Was {amount}',
   'inbox.note':
-      'Pending allocations still count toward the plan, so the numbers reflect '
-          'what you intend while you sort it out. Money only moves once a '
-          'request is approved.',
+      'Splits that aren’t confirmed yet already count toward the plan. The '
+          'money only moves once a request is approved.',
 
   'request.title': 'Request money',
   'request.subtitle': 'From a budget {name} controls',
@@ -910,17 +904,16 @@ const Map<String, String> _en = {
   'request.lands_in': 'LANDS IN',
   'request.name_budget_hint': 'Name a budget of your own',
   'request.creates_budget':
-      'You control nothing yet, so this creates a budget for you to receive it '
-          'into.',
+      'You don’t control a budget yet, so this makes one to hold it.',
   'request.partner_confirms':
-      '{name} confirms this in their Inbox. If they agree, the money moves into '
-          'your budget — you still never spend from theirs.',
+      '{name} confirms this in their Inbox. If they agree, the money moves '
+          'into your budget.',
   'request.send': 'Send request',
   'request.left_in': '{amount} left in {budget}',
   'request.err_source': 'Choose which budget to ask from.',
-  'request.err_amount': 'Enter an amount greater than zero.',
+  'request.err_amount': 'The amount has to be more than zero.',
   'request.err_too_much': 'Only {amount} is left in {budget}.',
-  'request.err_name': 'Name the budget this should land in.',
+  'request.err_name': 'Give the budget a name.',
   'request.err_destination': 'Choose where it should land.',
   'request.sent_to': 'Sent to {name}.',
   'request.none_title': 'Nothing to ask for yet',
@@ -939,16 +932,16 @@ const Map<String, String> _en = {
   'settings.month_first': 'The 1st (calendar month)',
   'settings.month_day': 'Day {day}',
   'settings.month_blurb':
-      'If you budget from payday rather than the 1st, set that day here. '
-          'Expenses land in the right month automatically.',
+      'If your budget starts on payday, set that day here. Expenses land in '
+          'the right month automatically.',
   'settings.language': 'Language',
   'settings.preferences': 'Preferences',
   'settings.account': 'Account',
   'settings.leave': 'Leave household',
   'settings.leave_title': 'Leave this household?',
   'settings.leave_body':
-      'You stop seeing the shared budgets and ledger. Everything stays with '
-          'your partner, and you can be invited back.',
+      'You stop seeing the shared budgets and ledger. It all stays with your '
+          'partner, and you can be invited back.',
   'settings.leave_cta': 'Leave',
   'settings.your_name': 'Your name',
   'settings.household_name': 'Household name',
@@ -956,47 +949,40 @@ const Map<String, String> _en = {
   'chart.range_day': 'Daily',
   'chart.range_month': 'Monthly',
   'chart.range_year': 'Yearly',
-  'chart.left_in': 'Left in {name} \u2014 your budget',
-  'chart.over_in': 'Over in {name} \u2014 your budget',
-  'chart.left_household': 'Left across the household budgets',
-  'chart.over_household': 'Over the household budgets',
+  'chart.left_in': 'Left in {name}, your budget',
+  'chart.over_in': 'Over in {name}, your budget',
+  'chart.left_household': 'Left across all the household budgets',
+  'chart.over_household': 'Over all the household budgets',
   'chart.budget_of': 'Budget {amount}',
   'chart.projection_ok':
-      'At this rate you finish at {amount} \u2014 {left} to spare.',
+      'Keep this up and you finish at {amount}, {left} to spare.',
   'chart.projection_over':
-      'At this rate you finish at {amount} \u2014 {over} over.',
+      'Keep this up and you finish at {amount}, {over} over.',
   'chart.projection_none': 'Nothing recorded this month yet.',
   'chart.fix_daily': 'Drop to {amount} a day and you land on it.',
   'chart.fix_stop': 'The budget is already spent.',
-  'chart.daily_note_none': '{amount} a day to play with. No day went over yet.',
-  'chart.daily_note_one': '{amount} a day to play with. {count} day went over.',
-  'chart.daily_note_many':
-      '{amount} a day to play with. {count} days went over.',
+  'chart.daily_note_none': '{amount} a day. No day has gone over.',
+  'chart.daily_note_one': '{amount} a day. {count} day went over.',
+  'chart.daily_note_many': '{amount} a day. {count} days went over.',
   'chart.year_note': '{amount} spent across {year}.',
   'chart.legend_spent': 'Spent',
-  'chart.legend_pace': 'Even pace',
+  'chart.legend_pace': 'On track',
   'chart.legend_projection': 'Projection',
   'chart.a11y': '{range} chart. {spent} spent of a {budget} budget.',
 
-  'splash.preparing': 'Getting your household ready\u2026',
+  'splash.preparing': 'One moment…',
 
-  'error.permission_denied':
-      'Firebase refused this. Usually that means the security rules have not '
-          'been deployed \u2014 open the Rules tab in the Firebase Console, '
-          'paste in firebase/firestore.rules and Publish. If they are '
-          'deployed, then this really is not yours to change.',
-  'error.offline': 'Could not reach Firebase. Check your connection; anything '
-      'you saved will go out on its own once you are back.',
+  'error.permission_denied': 'You don’t have permission for this.',
+  'error.offline':
+      'No connection. Anything you saved will go out on its own later.',
   'error.signed_out': 'Your session expired. Sign in again.',
-  'error.not_found': 'That is not there any more. It may have just been '
+  'error.not_found': 'That isn’t there any more. It may have just been '
       'deleted.',
   'error.already_exists': 'That already exists.',
-  'error.needs_index':
-      'Firestore needs an index for this query. The full error has a link '
-          'that creates it in one click.',
-  'error.quota': "Firebase's quota is used up for today. Try again tomorrow.",
+  'error.needs_index': 'Can’t show this yet. Try again later.',
+  'error.quota': 'The server is busy. Try again tomorrow.',
   'error.email_taken': 'That email is already in use.',
-  'error.email_invalid': 'That email does not look right.',
+  'error.email_invalid': 'That email isn’t valid.',
   'error.password_weak': 'That password is too short. Six characters minimum.',
   'error.credentials': 'That email or password is wrong.',
   'error.too_many': 'Too many attempts. Wait a moment.',
@@ -1012,8 +998,8 @@ const Map<String, String> _en = {
   'category_editor.none_left':
       'All of it is allocated. Free some up from another category first.',
   'category_editor.err_over':
-      'That is {over} too much. {budget} has only {headroom} unallocated \u2014 '
-          'lower another category first, or raise the budget itself.',
+      'That is {over} too much. {budget} has only {headroom} left. Lower '
+          'another category, or raise the budget.',
 
   'detail.taken_out': 'Taken back out',
   'detail.income_added': '{amount} paid into this budget.',
@@ -1023,7 +1009,7 @@ const Map<String, String> _en = {
   'detail.record_withdrawal': 'Take out',
 
   'inbox.all_allocated':
-      '{budget} is fully carved into categories. You will pick which one this '
+      '{budget} is fully split into categories. You’ll pick which one this '
           'comes out of.',
   'inbox.take_from_title': 'Take it out of which category?',
   'inbox.take_from_blurb':
@@ -1050,24 +1036,24 @@ const Map<String, String> _en = {
   'delete.title': 'Delete account',
   'delete.talk_title': 'Before you do',
   'delete.talk_body':
-      'If something is hard between you and {name}, an app is not where it '
-          'gets settled. Money is often standing in for something else \u2014 '
-          'being tired, not feeling heard, feeling alone with it.\n\nTry '
-          'talking first, gently, at a calm moment. Ending things is rarely '
-          'the answer. This button will still be here if it turns out to be '
+      'If something is hard between you and {name}, try talking about it '
+          'first, at a calm moment. Often it isn’t really about the '
+          'money.\n\nThis button will still be here if it turns out to be '
           'what you want.',
   'delete.what_happens': 'What happens',
   'delete.point_profile': 'Your name, email and profile are erased.',
-  'delete.point_signin': 'You will not be able to sign in with this account again.',
+  'delete.point_signin':
+      'You won’t be able to sign in with this account again.',
   'delete.point_fresh':
-      'You can sign up again later with the same email, but it is a new, empty account \u2014 nothing comes back.',
+      'You can sign up again with the same email, but it starts empty. '
+          'Nothing comes back.',
   'delete.point_solo':
       'Every budget, entry and saving pot of yours goes with it.',
   'delete.point_leave': 'You leave the household you share with {name}.',
   'delete.point_partner_keeps':
-      '{name} keeps the shared budgets and ledger \u2014 those are their '
-          'records too.',
-  'delete.point_forever': 'This cannot be undone. There is no backup.',
+      '{name} keeps the shared budgets and ledger. Those are their records '
+          'too.',
+  'delete.point_forever': 'This can’t be undone.',
   'delete.shared_title': 'The shared records',
   'delete.shared_blurb':
       'The budgets and the ledger are not yours alone. You can ask for them '
@@ -1081,26 +1067,24 @@ const Map<String, String> _en = {
   'delete.err_word': 'Type {word} exactly to continue.',
   'delete.final_title': 'Delete your account?',
   'delete.final_body':
-      'This is the last step. After this your account is gone and cannot be '
-          'brought back.',
+      'After this your account is gone and can’t be brought back.',
   'delete.confirm_cta': 'Yes, delete it',
-  'delete.keep_account': 'Cancel, keep my account',
+  'delete.keep_account': 'Cancel',
   'delete.cta': 'Delete my account',
 
   'erase.title': '{name} deleted their account',
   'erase.body':
-      '{name} asked for everything you shared to be erased too \u2014 the '
-          'budgets, the categories and the whole ledger. It is your call. If '
-          'you keep it, all of it stays with you.',
+      '{name} asked for everything you shared to be erased too: the budgets, '
+          'the categories and the whole ledger. It’s your call.',
   'erase.keep': 'Keep the records',
   'erase.erase': 'Erase everything',
   'erase.kept': 'The shared records have been kept.',
   'erase.confirm_title': 'Erase every shared record?',
   'erase.confirm_body':
-      'All your budgets, categories and ledger entries go, permanently. This '
-          'cannot be undone.',
+      'All your budgets, categories and ledger entries go. This can’t be '
+          'undone.',
   'erase.confirm_cta': 'Erase everything',
 
-  'app.cannot_reach': 'Could not reach your data',
+  'app.cannot_reach': 'Could not load your data',
   'app.setup_title': 'One setup step left',
 };
