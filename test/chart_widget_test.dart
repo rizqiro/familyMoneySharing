@@ -3,6 +3,7 @@ import 'package:family_money_sharing/core/i18n/app_language.dart';
 import 'package:family_money_sharing/core/i18n/app_text.dart';
 import 'package:family_money_sharing/core/theme/app_colors.dart';
 import 'package:family_money_sharing/core/theme/app_theme.dart';
+import 'package:family_money_sharing/core/widgets/app_mark.dart';
 import 'package:family_money_sharing/core/widgets/budget_tile.dart';
 import 'package:family_money_sharing/core/widgets/range_pills.dart';
 import 'package:family_money_sharing/core/widgets/spend_chart.dart';
@@ -275,6 +276,22 @@ void main() {
     await tester.tap(find.text('Tahunan'));
     await tester.pump();
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the app mark is drawn, not an image asset', (tester) async {
+    // It has to survive being asked for any size: the splash uses one, and a
+    // future about screen or empty state may use another.
+    for (final size in [24.0, 104.0, 512.0]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(body: Center(child: AppMark(size: size))),
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(AppMark)), Size(size, size));
+    }
   });
 
   testWidgets('the splash screen fits a small phone', (tester) async {

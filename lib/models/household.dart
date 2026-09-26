@@ -43,6 +43,8 @@ class Household {
     required this.activeInviteCode,
     required this.createdBy,
     required this.createdAt,
+    this.eraseRequestedBy = '',
+    this.eraseRequestedByName = '',
   });
 
   final String id;
@@ -57,6 +59,27 @@ class Household {
   /// The one live pairing code, or null. Kept here so minting a replacement
   /// never has to query the invites collection.
   final String? activeInviteCode;
+
+  /// Set when a departing member asked for the shared records to be erased
+  /// too, and waiting on whoever is left to agree.
+  ///
+  /// =============================================================================
+  /// WHY THIS IS A REQUEST AND NOT AN ACTION
+  /// =============================================================================
+  /// Deleting your own account is yours alone to decide. Erasing the budgets
+  /// and the ledger is not: those are your partner's records as much as yours,
+  /// and they may be the only copy of a year of their spending.
+  ///
+  /// So leaving sets this flag, and the person still here decides. If they say
+  /// no, they keep everything and the flag clears. Nobody can destroy somebody
+  /// else's history on their way out of the door.
+  final String eraseRequestedBy;
+
+  /// Their name, kept here because the account it belonged to is gone by the
+  /// time anybody reads this.
+  final String eraseRequestedByName;
+
+  bool get hasEraseRequest => eraseRequestedBy.isNotEmpty;
   final String createdBy;
   final DateTime? createdAt;
 
@@ -95,6 +118,8 @@ class Household {
       currencyCode: (data['currencyCode'] as String?) ?? 'IDR',
       monthStartDay: (data['monthStartDay'] as num?)?.toInt() ?? 1,
       activeInviteCode: data['activeInviteCode'] as String?,
+      eraseRequestedBy: (data['eraseRequestedBy'] as String?) ?? '',
+      eraseRequestedByName: (data['eraseRequestedByName'] as String?) ?? '',
       createdBy: (data['createdBy'] as String?) ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );

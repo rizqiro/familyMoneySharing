@@ -9,4 +9,9 @@
 -->
 <resources>
     <color name="launch_background">#BE3A20</color>
+
+    <!-- The adaptive icon's background layer. Same terracotta as the launch
+         screen and as AppColors.light.accent, so the icon, the system splash
+         and the app's first frame are one continuous colour. -->
+    <color name="ic_launcher_background">#BE3A20</color>
 </resources>

@@ -280,6 +280,30 @@ Either click the link, or run the index deploy in step 6.
 **Sign-up fails: "Email sign-in is not enabled"**
 Step 2 was skipped.
 
+**Google sign-in: "Google did not return an ID token"**
+Three things have to line up, and this error means one of them does not.
+
+1. **Enable Google** as a sign-in provider: Firebase Console -> Authentication
+   -> Sign-in method -> Google -> Enable. Set a support email while you are
+   there; it will not save without one.
+2. **Add your SHA-1 fingerprint** (Android): Project settings -> your Android
+   app -> Add fingerprint. Get it with:
+
+   ```
+   cd android && ./gradlew signingReport
+   ```
+
+   Use the SHA-1 from the `debug` variant while developing. **The release
+   fingerprint is different** - when you publish, add the one from Play
+   Console -> Setup -> App signing, or Google sign-in will work for you and
+   fail for every one of your users.
+3. **Download `google-services.json` again** after adding the fingerprint and
+   replace `android/app/google-services.json`. The old file does not contain
+   the new client and nothing will tell you so.
+
+**Google sign-in opens and immediately closes**
+Almost always the SHA-1. See above - it is step 2 that people miss.
+
 **The QR scanner is a blank box**
 Camera permission was declined, or the permission strings in step 5 are
 missing. The typed invite code works either way.

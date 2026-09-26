@@ -224,6 +224,108 @@ class HouseholdRepository {
     await batch.commit();
   }
 
+  /// Leaves the household as part of deleting an account.
+  ///
+  /// =============================================================================
+  /// WHO KEEPS THE SHARED RECORDS
+  /// =============================================================================
+  /// Three cases, and the difference between them is the whole feature:
+  ///
+  ///   * **Alone in the household** - everything goes with you. Nobody else is
+  ///     losing anything, so there is nothing to ask about.
+  ///   * **A partner remains, and you asked for a clean break** - you leave,
+  ///     and a request is left behind for them to agree to. They decide.
+  ///   * **A partner remains and you did not ask** - you leave, they keep the
+  ///     budgets and the ledger. Those are their records too.
+  ///
+  /// Your own entries stay in the shared ledger in the last two cases, under
+  /// the name the household already had a copy of. Deleting them would silently
+  /// rewrite your partner's spending history for months they have already
+  /// closed - and their budget totals would stop matching what they lived
+  /// through.
+  Future<void> departForDeletion({
+    required String householdId,
+    required String uid,
+    required String displayName,
+    required bool askToEraseShared,
+  }) async {
+    final snap = await _refs.household(householdId).get();
+    if (!snap.exists) return;
+
+    final household = Household.fromDoc(snap);
+    final alone = household.memberIds.length <= 1;
+
+    if (alone) {
+      await eraseEverything(householdId);
+      return;
+    }
+
+    final batch = db.batch();
+    batch.update(_refs.household(householdId), {
+      'memberIds': FieldValue.arrayRemove([uid]),
+      'members.$uid': FieldValue.delete(),
+      if (askToEraseShared) ...{
+        'eraseRequestedBy': uid,
+        'eraseRequestedByName': displayName,
+      },
+    });
+    await batch.commit();
+  }
+
+  /// Records that the person left behind wants the shared records gone too.
+  Future<void> confirmErase(String householdId) => eraseEverything(householdId);
+
+  /// Keeps everything and clears the request.
+  Future<void> declineErase(String householdId) =>
+      _refs.household(householdId).update({
+        'eraseRequestedBy': '',
+        'eraseRequestedByName': '',
+      });
+
+  /// Deletes the household and every document filed under it.
+  ///
+  /// =============================================================================
+  /// WHY THIS IS DONE BY HAND
+  /// =============================================================================
+  /// Firestore has no cascade. Deleting the household document would leave the
+  /// budgets, categories, entries, approvals and money requests sitting there
+  /// forever - invisible to the app, still on the bill, and still holding
+  /// somebody's financial history. "Delete my data" has to mean it.
+  ///
+  /// Batches cap at 500 operations, so this commits in chunks rather than one
+  /// go: a household with a couple of years of entries will exceed that.
+  ///
+  /// Not transactional. If it fails halfway the household is left partly
+  /// erased, which is recoverable by running it again - and is much better than
+  /// the alternative of not deleting anything.
+  Future<void> eraseEverything(String householdId) async {
+    final collections = [
+      _refs.expenses(householdId),
+      _refs.categories(householdId),
+      _refs.budgets(householdId),
+      _refs.approvals(householdId),
+      _refs.moneyRequests(householdId),
+    ];
+
+    for (final collection in collections) {
+      // Paged, so a long ledger does not have to fit in memory at once.
+      while (true) {
+        final page = await collection.limit(300).get();
+        if (page.docs.isEmpty) break;
+
+        final batch = db.batch();
+        for (final doc in page.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+
+        if (page.docs.length < 300) break;
+      }
+    }
+
+    await _refs.household(householdId).delete();
+  }
+
   Future<void> updateSettings({
     required String householdId,
     String? name,
