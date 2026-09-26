@@ -18,6 +18,7 @@ class SpendSplit extends StatelessWidget {
     required this.youLabel,
     required this.viewerUid,
     required this.emptyLabel,
+    required this.someoneLabel,
   });
 
   final Household household;
@@ -34,6 +35,11 @@ class SpendSplit extends StatelessWidget {
 
   /// Shown instead of the chart when nothing has been spent yet.
   final String emptyLabel;
+
+  /// Shown against entries filed by somebody who has since deleted their
+  /// account. Passed in like the other labels, because this widget has no
+  /// provider access of its own.
+  final String someoneLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +109,10 @@ class SpendSplit extends StatelessWidget {
                   child: Text(
                     entries[i].$1 == viewerUid
                         ? youLabel
-                        : household.displayNameOf(entries[i].$1),
+                        : household.displayNameOf(
+                            entries[i].$1,
+                            unknown: someoneLabel,
+                          ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: text.bodyMedium,

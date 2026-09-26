@@ -60,7 +60,7 @@ class BudgetDetailPage extends ConsumerWidget {
     final isController = view.budget.controllerId == uid;
     final controllerName = isController
         ? t('common.you')
-        : household.displayNameOf(view.budget.controllerId);
+        : household.displayNameOf(view.budget.controllerId, unknown: t('common.someone'));
 
     final expenses =
         summary.expenses.where((e) => e.budgetId == budgetId).toList();
@@ -578,7 +578,7 @@ class _SpentSection extends ConsumerWidget {
                     ? t('detail.you_control_here')
                     : t('detail.controls_here', {
                         'name':
-                            household.displayNameOf(view.budget.controllerId),
+                            household.displayNameOf(view.budget.controllerId, unknown: t('common.someone')),
                       }),
                 style: text.bodySmall?.copyWith(color: colors.inkSecondary),
               ),

@@ -283,7 +283,7 @@ class _BudgetEditorState extends ConsumerState<BudgetEditor> {
                       label: Text(
                         id == uid
                             ? t('common.you')
-                            : household.displayNameOf(id),
+                            : household.displayNameOf(id, unknown: t('common.someone')),
                       ),
                       selected: controllerId == id,
                       onSelected: (_) => setState(() => _controllerId = id),

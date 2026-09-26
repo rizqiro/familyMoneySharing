@@ -65,6 +65,12 @@ String describeFailure(Object error, AppText t) {
 String _withDetail(AppText t, String key, String code) => '${t(key)} ($code)';
 
 String _firestoreKey(String code) => switch (code) {
+      // The user-facing sentence stays short on purpose. When this shows up
+      // during development the usual cause is that firebase/firestore.rules
+      // has not been published to the Firebase Console yet - but that is a
+      // sentence for the developer, not for someone trying to log groceries.
+      // The raw code is appended by [_withDetail], which is enough to tell the
+      // two cases apart in a bug report.
       'permission-denied' => 'error.permission_denied',
       // The device is offline, or Firestore could not be reached. Writes are
       // queued locally and will go out on their own, which is worth saying so

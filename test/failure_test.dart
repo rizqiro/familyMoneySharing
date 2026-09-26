@@ -20,22 +20,26 @@ void main() {
       FirebaseException(plugin: 'cloud_firestore', code: code);
 
   group('describeFailure', () {
-    test('permission-denied points at the undeployed rules', () {
+    test('permission-denied says the plain thing and keeps the code', () {
       final message = describeFailure(firestore('permission-denied'), en);
 
-      // The whole point: it names the thing to go and do.
-      expect(message, contains('Rules'));
-      expect(message, contains('firestore.rules'));
+      // Short, and about the person: the undeployed-rules explanation is a
+      // developer's problem, so it lives in a comment in failure.dart, not on
+      // the screen of someone trying to log groceries.
+      expect(message, contains('permission'));
+      expect(message, isNot(contains('firestore.rules')));
+      expect(message, isNot(contains('Firebase')));
 
-      // And it still carries the code, so a screenshot is a usable bug report.
+      // The code still rides along, so a screenshot is a usable bug report -
+      // and still tells the undeployed-rules case apart from a real refusal.
       expect(message, contains('permission-denied'));
     });
 
     test('it speaks whichever language the app is set to', () {
       final message = describeFailure(firestore('permission-denied'), id);
 
-      expect(message, contains('aturan keamanan'));
-      expect(message, isNot(contains('security rules')));
+      expect(message, contains('tidak punya izin'));
+      expect(message, isNot(contains('permission for this')));
     });
 
     test('offline is not reported as a refusal', () {
@@ -43,8 +47,8 @@ void main() {
       // the user's fault, and only one is worth retyping the form over.
       final message = describeFailure(firestore('unavailable'), en);
 
-      expect(message, contains('connection'));
-      expect(message, isNot(contains('refused')));
+      expect(message, contains('No connection'));
+      expect(message, isNot(contains('permission')));
     });
 
     test('an unmapped code still gets a sentence and keeps the code', () {

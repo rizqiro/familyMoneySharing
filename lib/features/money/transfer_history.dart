@@ -105,7 +105,7 @@ class _TransferRow extends ConsumerWidget {
         : (ref
                 .watch(householdProvider)
                 .valueOrNull
-                ?.displayNameOf(partner)
+                ?.displayNameOf(partner, unknown: t('common.someone'))
                 .split(' ')
                 .first ??
             t('common.partner'));
