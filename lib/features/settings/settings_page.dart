@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/soft_card.dart';
 import '../../state/providers.dart';
+import 'delete_account_page.dart';
 import '../pairing/invite_page.dart';
 
 /// Everything adjustable, in three groups.
@@ -215,6 +216,23 @@ class SettingsPage extends ConsumerWidget {
                     ref,
                     household.id,
                     profile.uid,
+                  ),
+                ),
+                // Last in the list, and a page rather than a dialog: see
+                // DeleteAccountPage for why this one gets room to explain
+                // itself.
+                ListTile(
+                  title: Text(
+                    t('delete.title'),
+                    style: TextStyle(color: colors.negative),
+                  ),
+                  leading:
+                      Icon(Icons.person_remove_outlined, color: colors.negative),
+                  trailing: Icon(Icons.chevron_right, color: colors.inkMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const DeleteAccountPage(),
+                    ),
                   ),
                 ),
               ],

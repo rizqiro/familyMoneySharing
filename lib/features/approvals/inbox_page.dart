@@ -6,8 +6,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/soft_card.dart';
+import '../../core/format/failure.dart';
 import '../../core/format/money.dart';
 import '../../models/approval.dart';
+import '../../models/household.dart';
 import '../../models/money_request.dart';
 import '../../state/period_summary.dart';
 import '../../state/providers.dart';
@@ -53,11 +55,13 @@ class InboxPage extends ConsumerWidget {
         .where((r) => !r.isPending)
         .toList();
 
+    final eraseAsked = household?.hasEraseRequest ?? false;
+
     return Scaffold(
       appBar: AppBar(title: Text(t('inbox.title'))),
       body: SafeArea(
         top: false,
-        child: nothingWaiting && history.isEmpty
+        child: nothingWaiting && history.isEmpty && !eraseAsked
             ? EmptyState(
                 icon: Icons.check_circle_outline,
                 title: t('inbox.empty'),
@@ -73,6 +77,13 @@ class InboxPage extends ConsumerWidget {
                   120,
                 ),
                 children: [
+                  // Top of the list whatever else is waiting: somebody has
+                  // left and is asking for the shared records to go too. It is
+                  // the only irreversible thing on this screen.
+                  if (household != null && household.hasEraseRequest) ...[
+                    _EraseRequestCard(household: household),
+                    const SizedBox(height: Insets.xl),
+                  ],
                   if (nothingWaiting)
                     EmptyState(
                       icon: Icons.check_circle_outline,
@@ -766,6 +777,162 @@ class _SourceCategoryRow extends StatelessWidget {
         trailing: enough
             ? Icon(Icons.chevron_right, size: 20, color: colors.inkMuted)
             : null,
+      ),
+    );
+  }
+}
+
+/// "Your partner deleted their account and asked for everything to go."
+///
+/// =============================================================================
+/// WHY THIS IS A CHOICE AND NOT A NOTIFICATION
+/// =============================================================================
+/// The person who left has already gone; their account no longer exists. What
+/// is left is a household full of budgets and a year of ledger entries that
+/// belong to both of them - and now, in practice, only to whoever is reading
+/// this.
+///
+/// Honouring the request destroys that. Refusing keeps it. Neither is obviously
+/// right, which is exactly why the app must not pick: it is the last thing the
+/// two of them will decide together, and the one still here gets the say.
+///
+/// Refusing is the safe default and the left-hand button. Erasing is styled as
+/// the destructive action it is, and asks once more.
+class _EraseRequestCard extends ConsumerStatefulWidget {
+  const _EraseRequestCard({required this.household});
+
+  final Household household;
+
+  @override
+  ConsumerState<_EraseRequestCard> createState() => _EraseRequestCardState();
+}
+
+class _EraseRequestCardState extends ConsumerState<_EraseRequestCard> {
+  bool _busy = false;
+
+  Future<void> _decide(bool erase) async {
+    final t = ref.read(textProvider);
+    final repo = ref.read(householdRepositoryProvider);
+    final id = widget.household.id;
+
+    if (erase) {
+      final sure = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(t('erase.confirm_title')),
+          content: Text(t('erase.confirm_body')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(t('common.cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: context.colors.accentDeep,
+              ),
+              child: Text(t('erase.confirm_cta')),
+            ),
+          ],
+        ),
+      );
+      if (sure != true) return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      if (erase) {
+        await repo.confirmErase(id);
+        // Everything they shared is gone, including the household this screen
+        // was reading from. The auth gate drops them back to the welcome
+        // screen on the next frame.
+      } else {
+        await repo.declineErase(id);
+        if (mounted) showToast(context, t('erase.kept'));
+      }
+    } catch (e) {
+      if (mounted) {
+        showToast(context, describeFailure(e, ref.read(textProvider)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
+
+    final who = widget.household.eraseRequestedByName.isEmpty
+        ? t('common.partner')
+        : widget.household.eraseRequestedByName.split(' ').first;
+
+    return SoftCard(
+      color: colors.accentSoft,
+      border: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.delete_forever_outlined,
+                size: 20,
+                color: colors.onAccentSoft,
+              ),
+              const SizedBox(width: Insets.sm),
+              Expanded(
+                child: Text(
+                  t('erase.title', {'name': who}),
+                  style: text.titleMedium
+                      ?.copyWith(color: colors.onAccentSoft),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Insets.md),
+          Text(
+            t('erase.body', {'name': who}),
+            style: text.bodyMedium
+                ?.copyWith(color: colors.onAccentSoft, height: 1.45),
+          ),
+          const SizedBox(height: Insets.lg),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: _busy ? null : () => _decide(false),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colors.surface,
+                    foregroundColor: colors.ink,
+                    minimumSize: const Size(0, 46),
+                  ),
+                  child: Text(t('erase.keep')),
+                ),
+              ),
+              const SizedBox(width: Insets.md),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _busy ? null : () => _decide(true),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colors.onAccentSoft,
+                    side: BorderSide(color: colors.onAccentSoft),
+                    minimumSize: const Size(0, 46),
+                  ),
+                  child: _busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(t('erase.erase')),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

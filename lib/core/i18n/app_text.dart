@@ -544,6 +544,62 @@ const Map<String, String> _id = {
   'saving_seed.emergency': 'Dana darurat',
   'saving_seed.other': 'Lainnya',
 
+  // --------------------------------------------- sign-in & account erase
+  'auth.or': 'atau',
+  'auth.continue_google': 'Lanjut dengan Google',
+
+  'delete.title': 'Hapus akun',
+  'delete.talk_title': 'Sebelum lanjut',
+  'delete.talk_body':
+      'Kalau ada yang berat antara kamu dan {name}, aplikasi bukan tempat '
+          'menyelesaikannya. Uang sering jadi bentuk dari hal lain \u2014 rasa '
+          'capek, rasa tidak didengar, rasa sendirian.\n\nCoba bicara dulu, '
+          'pelan-pelan, di waktu yang tenang. Mengakhiri sesuatu jarang jadi '
+          'jawabannya. Tombol ini akan tetap ada kalau memang itu yang kamu '
+          'pilih nanti.',
+  'delete.what_happens': 'Yang akan terjadi',
+  'delete.point_profile': 'Nama, email, dan profil kamu dihapus.',
+  'delete.point_signin': 'Kamu tidak bisa masuk lagi dengan akun ini.',
+  'delete.point_solo':
+      'Semua anggaran, catatan, dan tabungan kamu ikut terhapus.',
+  'delete.point_leave': 'Kamu keluar dari rumah tangga bersama {name}.',
+  'delete.point_partner_keeps':
+      '{name} tetap menyimpan anggaran dan catatan bersama \u2014 itu '
+          'catatan dia juga.',
+  'delete.point_forever': 'Tidak bisa dibatalkan. Tidak ada cadangan.',
+  'delete.shared_title': 'Catatan bersama',
+  'delete.shared_blurb':
+      'Anggaran dan catatan bersama bukan milik kamu sendiri. Kamu bisa minta '
+          'semuanya dihapus, tapi {name} yang memutuskan.',
+  'delete.ask_erase': 'Minta {name} menghapus semua catatan bersama',
+  'delete.ask_erase_note':
+      '{name} akan ditanya. Kalau dia menolak, catatannya tetap ada padanya.',
+  'delete.confirm_title': 'Konfirmasi',
+  'delete.confirm_blurb': 'Ketik {word} untuk melanjutkan.',
+  'delete.confirm_word': 'HAPUS',
+  'delete.err_word': 'Ketik {word} persis untuk melanjutkan.',
+  'delete.final_title': 'Hapus akun kamu?',
+  'delete.final_body':
+      'Ini langkah terakhir. Setelah ini akun kamu hilang dan tidak bisa '
+          'dikembalikan.',
+  'delete.confirm_cta': 'Ya, hapus',
+  'delete.keep_account': 'Batal, simpan akun saya',
+  'delete.cta': 'Hapus akun saya',
+
+  'erase.title': '{name} sudah menghapus akunnya',
+  'erase.body':
+      '{name} minta semua catatan bersama kalian ikut dihapus \u2014 anggaran, '
+          'kategori, dan seluruh catatan pengeluaran. Kamu yang memutuskan. '
+          'Kalau kamu simpan, semuanya tetap ada untuk kamu.',
+  'erase.keep': 'Simpan catatannya',
+  'erase.erase': 'Hapus semuanya',
+  'erase.kept': 'Catatan bersama tetap tersimpan.',
+  'erase.confirm_title': 'Hapus semua catatan bersama?',
+  'erase.confirm_body':
+      'Semua anggaran, kategori, dan catatan pengeluaran kalian akan hilang '
+          'untuk selamanya. Tidak bisa dibatalkan.',
+  'erase.confirm_cta': 'Hapus semuanya',
+
   // ---------------------------------------------------------- app-level
   'splash.preparing': 'Menyiapkan rumah tangga kamu\u2026',
 
@@ -985,6 +1041,61 @@ const Map<String, String> _en = {
   'saving_seed.education': 'Education',
   'saving_seed.emergency': 'Emergency fund',
   'saving_seed.other': 'Other',
+
+  'auth.or': 'or',
+  'auth.continue_google': 'Continue with Google',
+
+  'delete.title': 'Delete account',
+  'delete.talk_title': 'Before you do',
+  'delete.talk_body':
+      'If something is hard between you and {name}, an app is not where it '
+          'gets settled. Money is often standing in for something else \u2014 '
+          'being tired, not feeling heard, feeling alone with it.\n\nTry '
+          'talking first, gently, at a calm moment. Ending things is rarely '
+          'the answer. This button will still be here if it turns out to be '
+          'what you want.',
+  'delete.what_happens': 'What happens',
+  'delete.point_profile': 'Your name, email and profile are erased.',
+  'delete.point_signin': 'You will not be able to sign in again.',
+  'delete.point_solo':
+      'Every budget, entry and saving pot of yours goes with it.',
+  'delete.point_leave': 'You leave the household you share with {name}.',
+  'delete.point_partner_keeps':
+      '{name} keeps the shared budgets and ledger \u2014 those are their '
+          'records too.',
+  'delete.point_forever': 'This cannot be undone. There is no backup.',
+  'delete.shared_title': 'The shared records',
+  'delete.shared_blurb':
+      'The budgets and the ledger are not yours alone. You can ask for them '
+          'to be erased, but {name} decides.',
+  'delete.ask_erase': 'Ask {name} to erase everything we shared',
+  'delete.ask_erase_note':
+      '{name} will be asked. If they say no, the records stay with them.',
+  'delete.confirm_title': 'Confirm',
+  'delete.confirm_blurb': 'Type {word} to continue.',
+  'delete.confirm_word': 'DELETE',
+  'delete.err_word': 'Type {word} exactly to continue.',
+  'delete.final_title': 'Delete your account?',
+  'delete.final_body':
+      'This is the last step. After this your account is gone and cannot be '
+          'brought back.',
+  'delete.confirm_cta': 'Yes, delete it',
+  'delete.keep_account': 'Cancel, keep my account',
+  'delete.cta': 'Delete my account',
+
+  'erase.title': '{name} deleted their account',
+  'erase.body':
+      '{name} asked for everything you shared to be erased too \u2014 the '
+          'budgets, the categories and the whole ledger. It is your call. If '
+          'you keep it, all of it stays with you.',
+  'erase.keep': 'Keep the records',
+  'erase.erase': 'Erase everything',
+  'erase.kept': 'The shared records have been kept.',
+  'erase.confirm_title': 'Erase every shared record?',
+  'erase.confirm_body':
+      'All your budgets, categories and ledger entries go, permanently. This '
+          'cannot be undone.',
+  'erase.confirm_cta': 'Erase everything',
 
   'app.cannot_reach': 'Could not reach your data',
   'app.setup_title': 'One setup step left',

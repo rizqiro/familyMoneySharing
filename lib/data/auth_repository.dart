@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../core/i18n/app_language.dart';
 import '../models/app_user.dart';
@@ -79,19 +80,160 @@ class AuthRepository {
 
     // A profile can be missing if sign-up was interrupted after the auth
     // account was created but before the document was written.
+    await _ensureProfile(
+      credential.user!,
+      fallbackName: _nameFromEmail(email),
+      language: language,
+    );
+  }
+
+  /// Signs in with a Google account, creating the profile on first use.
+  ///
+  /// =============================================================================
+  /// HOW THIS FITS TOGETHER
+  /// =============================================================================
+  /// Two separate systems. `google_sign_in` talks to Google and comes back with
+  /// an ID token proving who you are. Firebase Auth does not care where that
+  /// token came from - it takes the token, verifies it with Google itself, and
+  /// issues its own session. From that point on the rest of the app cannot tell
+  /// how you signed in, which is the point: `authStateChanges` emits the same
+  /// kind of `User` either way.
+  ///
+  /// The package changed shape in version 7: there is a single
+  /// `GoogleSignIn.instance`, it must be `initialize`d once before use, and
+  /// `authenticate()` throws on cancellation rather than returning null.
+  ///
+  /// Returns false when the person backed out of the Google sheet - which is
+  /// not an error and must not be shown as one.
+  Future<bool> signInWithGoogle({required AppLanguage language}) async {
+    final google = GoogleSignIn.instance;
+
+    // `initialize` is idempotent but does platform work, so it is done once and
+    // remembered. Not in main() on purpose: someone who only ever uses email
+    // should not pay for this at startup.
+    if (!_googleReady) {
+      await google.initialize();
+      _googleReady = true;
+    }
+
+    // Web uses a Google-rendered button instead of an app-triggered flow, so
+    // the button is hidden there rather than failing at the tap.
+    if (!google.supportsAuthenticate()) {
+      throw const AuthFailure(
+        'Google sign-in is not available on this platform.',
+      );
+    }
+
+    final GoogleSignInAccount account;
+    try {
+      account = await google.authenticate();
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return false;
+      throw AuthFailure(e.description ?? 'Google sign-in did not complete.');
+    }
+
+    final idToken = account.authentication.idToken;
+    if (idToken == null) {
+      // Almost always one specific misconfiguration - see FIREBASE_SETUP.md.
+      throw const AuthFailure(
+        'Google did not return an ID token. On Android this usually means the '
+        'SHA-1 fingerprint is missing from the Firebase project, or the web '
+        'client ID is not set. See docs/FIREBASE_SETUP.md.',
+      );
+    }
+
+    final credential = await _guard(
+      () => _auth.signInWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      ),
+    );
+
     final user = credential.user!;
+    await _ensureProfile(
+      user,
+      // Google gives us a name; email/password sign-up asks for one. Falling
+      // back to the email's local part beats an empty avatar and a blank
+      // ledger row.
+      fallbackName: account.displayName ?? _nameFromEmail(user.email),
+      language: language,
+    );
+    return true;
+  }
+
+  bool _googleReady = false;
+
+  static String _nameFromEmail(String? email) {
+    if (email == null || !email.contains('@')) return '';
+    return email.split('@').first;
+  }
+
+  /// Writes the profile document if it is not there yet.
+  ///
+  /// Needed on every sign-in path, not just sign-up: a Google account has never
+  /// been here before on its first visit, and an interrupted email sign-up can
+  /// leave an auth account with no profile behind it.
+  Future<void> _ensureProfile(
+    User user, {
+    required String fallbackName,
+    required AppLanguage language,
+  }) async {
     final doc = await _refs.user(user.uid).get();
-    if (!doc.exists) {
-      await _refs.user(user.uid).set(
-            AppUser(
-              uid: user.uid,
-              displayName: user.displayName ?? '',
-              email: user.email ?? email.trim(),
-              householdId: null,
-              language: language,
-              createdAt: null,
-            ).toCreateJson(),
-          );
+    if (doc.exists) return;
+
+    final name = (user.displayName ?? '').trim().isNotEmpty
+        ? user.displayName!.trim()
+        : fallbackName.trim();
+
+    if ((user.displayName ?? '').trim().isEmpty && name.isNotEmpty) {
+      await user.updateDisplayName(name);
+    }
+
+    await _refs.user(user.uid).set(
+          AppUser(
+            uid: user.uid,
+            displayName: name,
+            email: user.email ?? '',
+            householdId: null,
+            language: language,
+            createdAt: null,
+          ).toCreateJson(),
+        );
+  }
+
+  /// Erases the account: the profile document first, then the auth account.
+  ///
+  /// =============================================================================
+  /// ORDER MATTERS, AND SO DOES WHAT IS *NOT* HERE
+  /// =============================================================================
+  /// The Firestore document goes first. Deleting the auth account first would
+  /// sign you out mid-way, and the security rules would then refuse the
+  /// document delete - leaving an orphaned profile nobody can ever remove.
+  ///
+  /// Leaving the household is NOT done here. That is
+  /// `HouseholdRepository.departForDeletion`, because it is the piece with real
+  /// decisions in it (who keeps the shared records), and this class has no
+  /// business knowing about households.
+  ///
+  /// Firebase refuses to delete an account whose sign-in is more than a few
+  /// minutes old. That is a deliberate protection, not a bug: it stops someone
+  /// who picked up an unlocked phone from erasing the account. When it happens
+  /// the caller is told to sign in again.
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _refs.user(user.uid).delete();
+
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw const AuthFailure(
+          'For your security, sign in again and then delete your account. '
+          'It only takes a moment.',
+        );
+      }
+      throw AuthFailure(_messageFor(e));
     }
   }
 

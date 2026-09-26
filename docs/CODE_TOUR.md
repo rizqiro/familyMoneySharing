@@ -508,6 +508,16 @@ never in a screen. Two screens doing their own arithmetic is how they come to
 disagree, and a disagreement about money looks exactly like a working app.
 Then add a test to `test/period_summary_test.dart` - that file is the spec.
 
+**Delete a user's data.** Two pieces, deliberately apart:
+`AuthRepository.deleteAccount` erases the profile and the sign-in, and
+`HouseholdRepository.departForDeletion` decides what happens to the shared
+records. Deleting your own account is always unilateral - an app-store
+requirement, and the right default: requiring a partner's approval to leave
+would hand them a veto over it. Erasing the SHARED records is a request the
+remaining member accepts or refuses, because those are their records too.
+Firestore has no cascade, so `eraseEverything` pages through each collection
+by hand - "delete my data" has to actually mean it.
+
 **Add a chart.** Add a builder to `SpendSeries` in `state/chart_series.dart`,
 a painter in `core/widgets/spend_chart.dart`, and a provider that feeds one to
 the other. Keep the arithmetic out of the painter - that split is the only
