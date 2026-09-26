@@ -186,11 +186,12 @@ class _RequestMoneySheetState extends ConsumerState<RequestMoneySheet> {
       // Touching context after that throws.
       if (!mounted) return;
       Navigator.of(context).pop();
+      final t = ref.read(textProvider);
       showToast(
         context,
-        ref.read(textProvider)('request.sent_to', {
+        t('request.sent_to', {
           'name': household
-              .displayNameOf(source.budget.controllerId)
+              .displayNameOf(source.budget.controllerId, unknown: t('common.someone'))
               .split(' ')
               .first,
         }),

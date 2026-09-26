@@ -87,10 +87,23 @@ class Household {
 
   HouseholdMember? member(String uid) => members[uid];
 
-  String displayNameOf(String uid) =>
+  /// The member's name, or [unknown] when there is no member by that id.
+  ///
+  /// =============================================================================
+  /// WHY THE FALLBACK IS PASSED IN AND NOT WRITTEN HERE
+  /// =============================================================================
+  /// An id with no member behind it is not an error - it is somebody who
+  /// deleted their account. Their ledger entries stay, because they are the
+  /// other person's history too, and those rows still need a name on them.
+  ///
+  /// It is REQUIRED rather than defaulted so that adding a new place that shows
+  /// a name cannot quietly ship English into the other four languages. This
+  /// method used to return a hardcoded 'Someone', which is exactly what an
+  /// Indonesian household saw against a departed partner's old entries.
+  String displayNameOf(String uid, {required String unknown}) =>
       members[uid]?.displayName.trim().isNotEmpty == true
           ? members[uid]!.displayName
-          : 'Someone';
+          : unknown;
 
   /// The other person in a two-person household, if there is one.
   HouseholdMember? partnerOf(String uid) {

@@ -497,7 +497,7 @@ class _AllocationCardState extends ConsumerState<_AllocationCard> {
     final household = ref.watch(householdProvider).valueOrNull;
     final approval = widget.approval;
 
-    final asker = household?.displayNameOf(approval.requestedBy) ?? 'Partner';
+    final asker = household?.displayNameOf(approval.requestedBy, unknown: t('common.someone')) ?? 'Partner';
 
     // Only set when an already-agreed allocation was changed, so the card can
     // show what moved rather than just the new figure.
@@ -598,7 +598,7 @@ class _SentMoneyCard extends ConsumerWidget {
     final household = ref.watch(householdProvider).valueOrNull;
 
     final partnerName =
-        household?.displayNameOf(request.requestedFor).split(' ').first ??
+        household?.displayNameOf(request.requestedFor, unknown: t('common.someone')).split(' ').first ??
             t('common.partner');
 
     return SoftCard(
@@ -664,7 +664,7 @@ class _SentAllocationCard extends ConsumerWidget {
     final household = ref.watch(householdProvider).valueOrNull;
 
     final partnerName =
-        household?.displayNameOf(approval.requestedFor).split(' ').first ??
+        household?.displayNameOf(approval.requestedFor, unknown: t('common.someone')).split(' ').first ??
             t('common.partner');
 
     return SoftCard(

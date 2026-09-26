@@ -173,7 +173,7 @@ class BudgetTile extends ConsumerWidget {
     final controller = mine
         ? t('budgets.you_control')
         : t('budgets.partner_controls', {
-            'name': household?.displayNameOf(view.budget.controllerId) ??
+            'name': household?.displayNameOf(view.budget.controllerId, unknown: t('common.someone')) ??
                 t('common.partner'),
           });
 

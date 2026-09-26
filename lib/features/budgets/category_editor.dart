@@ -162,10 +162,14 @@ class _CategoryEditorState extends ConsumerState<CategoryEditor> {
       if (!mounted) return;
       Navigator.of(context).pop();
       if (partnerUid != null) {
+        final t = ref.read(textProvider);
         showToast(
           context,
-          ref.read(textProvider)('category_editor.sent_to', {
-            'name': household.displayNameOf(partnerUid).split(' ').first,
+          t('category_editor.sent_to', {
+            'name': household
+                .displayNameOf(partnerUid, unknown: t('common.someone'))
+                .split(' ')
+                .first,
           }),
         );
       }

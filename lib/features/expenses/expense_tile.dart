@@ -41,7 +41,7 @@ class ExpenseTile extends ConsumerWidget {
 
     final spender = expense.spentBy == uid
         ? t('common.you')
-        : (household?.displayNameOf(expense.spentBy) ??
+        : (household?.displayNameOf(expense.spentBy, unknown: t('common.someone')) ??
             t('common.partner'));
 
     // Which way this entry went. A row filed against a saving pot before

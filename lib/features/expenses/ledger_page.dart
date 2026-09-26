@@ -106,7 +106,7 @@ class _LedgerPageState extends ConsumerState<LedgerPage> {
                         child: _FilterChip(
                           label: id == uid
                               ? t('common.you')
-                              : household.displayNameOf(id).split(' ').first,
+                              : household.displayNameOf(id, unknown: t('common.someone')).split(' ').first,
                           selected: _filterUid == id,
                           onTap: () => setState(() => _filterUid = id),
                         ),

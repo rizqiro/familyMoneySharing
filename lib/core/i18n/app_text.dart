@@ -560,6 +560,8 @@ const Map<String, String> _id = {
   'delete.what_happens': 'Yang akan terjadi',
   'delete.point_profile': 'Nama, email, dan profil kamu dihapus.',
   'delete.point_signin': 'Kamu tidak bisa masuk lagi dengan akun ini.',
+  'delete.point_fresh':
+      'Nanti kamu bisa daftar lagi pakai email yang sama, tapi jadi akun baru yang kosong \u2014 tidak ada yang kembali.',
   'delete.point_solo':
       'Semua anggaran, catatan, dan tabungan kamu ikut terhapus.',
   'delete.point_leave': 'Kamu keluar dari rumah tangga bersama {name}.',
@@ -1056,7 +1058,9 @@ const Map<String, String> _en = {
           'what you want.',
   'delete.what_happens': 'What happens',
   'delete.point_profile': 'Your name, email and profile are erased.',
-  'delete.point_signin': 'You will not be able to sign in again.',
+  'delete.point_signin': 'You will not be able to sign in with this account again.',
+  'delete.point_fresh':
+      'You can sign up again later with the same email, but it is a new, empty account \u2014 nothing comes back.',
   'delete.point_solo':
       'Every budget, entry and saving pot of yours goes with it.',
   'delete.point_leave': 'You leave the household you share with {name}.',

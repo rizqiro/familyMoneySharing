@@ -174,6 +174,10 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
                 children: [
                   _Point(text: t('delete.point_profile')),
                   _Point(text: t('delete.point_signin')),
+                  // Said out loud because the point above reads like a ban
+                  // otherwise. Deleting frees the email; signing up again
+                  // works, it just starts from nothing.
+                  _Point(text: t('delete.point_fresh')),
                   if (partnerName == null)
                     _Point(text: t('delete.point_solo'), emphasis: true)
                   else ...[

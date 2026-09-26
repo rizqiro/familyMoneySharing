@@ -140,6 +140,21 @@ void main() {
     expect(find.textContaining('Nadia will be asked'), findsOneWidget);
   });
 
+  testWidgets('it does not imply the person is banned for good',
+      (tester) async {
+    await pump(tester, paired: false);
+
+    // Deleting a Firebase account frees the email, so signing up again works
+    // - it just gets you a new, empty account. Saying only "you will not be
+    // able to sign in again" reads as a permanent ban, which is wrong and
+    // would put somebody off deleting when they are entitled to.
+    expect(
+      find.textContaining('You can sign up again later'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('nothing comes back'), findsOneWidget);
+  });
+
   testWidgets('the wrong confirmation word stops it', (tester) async {
     await pump(tester, paired: true);
 

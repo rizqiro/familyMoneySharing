@@ -145,6 +145,7 @@ class DashboardPage extends ConsumerWidget {
                     youLabel: t('common.you'),
                     viewerUid: summary.viewerUid,
                     emptyLabel: t('ledger.empty'),
+                    someoneLabel: t('common.someone'),
                   ),
                 ),
                 const SizedBox(height: Insets.xl),
