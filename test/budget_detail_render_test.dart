@@ -133,6 +133,10 @@ void main() {
           budgetId: 'pot', kind: EntryKind.income, day: 10,),
       entry('p3', 's2', 3000000, 'Setoran darurat',
           budgetId: 'pot', kind: EntryKind.income, day: 12,),
+      // Paid straight into the pot without naming a category: the third row
+      // of the breakdown, and the only one that was always zero before.
+      entry('p7', '', 1500000, 'THR masuk tabungan',
+          budgetId: 'pot', kind: EntryKind.income, day: 8,),
       entry('p6', 's2', 4800000, 'Bonus masuk tabungan',
           budgetId: 'pot', kind: EntryKind.income, day: 14,),
       entry('p4', 's2', 800000, 'Ambil buat berobat',
