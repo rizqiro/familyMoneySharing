@@ -44,6 +44,7 @@ class DeleteAccountPage extends ConsumerStatefulWidget {
 
 class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   final _confirm = TextEditingController();
+  final _password = TextEditingController();
   bool _alsoEraseShared = false;
   bool _busy = false;
   String? _error;
@@ -51,6 +52,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   @override
   void dispose() {
     _confirm.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -68,6 +70,15 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     // through to a silent return would look like a dead button.
     if (_confirm.text.trim().toUpperCase() != _word(t).toUpperCase()) {
       setState(() => _error = t('delete.err_word', {'word': _word(t)}));
+      return;
+    }
+
+    // Firebase will not delete an account on a sign-in more than a few minutes
+    // old, and reading this page takes longer than that. Asking here means the
+    // proof is in hand BEFORE anything is destroyed.
+    final needsPassword = ref.read(deleteNeedsPasswordProvider);
+    if (needsPassword && _password.text.isEmpty) {
+      setState(() => _error = t('delete.err_password'));
       return;
     }
 
@@ -103,7 +114,12 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
               askToEraseShared: _alsoEraseShared,
             );
       }
-      await ref.read(authRepositoryProvider).deleteAccount();
+      // False means a Google account dismissed the sheet, which cancels the
+      // deletion without touching anything. Nothing has happened, so there is
+      // nothing to report.
+      await ref
+          .read(authRepositoryProvider)
+          .deleteAccount(password: _password.text);
       // Signing out is what the auth gate reacts to; there is no screen left
       // to navigate back to.
     } catch (e) {
@@ -246,6 +262,27 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(hintText: _word(t)),
             ),
+
+            // Only for accounts that have a password. A Google account proves
+            // itself by opening the Google sheet again when the button is
+            // pressed, so there is nothing to type.
+            if (ref.watch(deleteNeedsPasswordProvider)) ...[
+              const SizedBox(height: Insets.lg),
+              Text(
+                t('delete.password_blurb'),
+                style: text.bodyMedium?.copyWith(color: colors.inkSecondary),
+              ),
+              const SizedBox(height: Insets.md),
+              TextField(
+                controller: _password,
+                obscureText: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: InputDecoration(
+                  hintText: t('auth.password_hint'),
+                ),
+              ),
+            ],
 
             if (_error != null) ...[
               const SizedBox(height: Insets.lg),

@@ -132,20 +132,8 @@ class AuthRepository {
       throw AuthFailure(e.description ?? 'Google sign-in did not complete.');
     }
 
-    final idToken = account.authentication.idToken;
-    if (idToken == null) {
-      // Almost always one specific misconfiguration - see FIREBASE_SETUP.md.
-      throw const AuthFailure(
-        'Google did not return an ID token. On Android this usually means the '
-        'SHA-1 fingerprint is missing from the Firebase project, or the web '
-        'client ID is not set. See docs/FIREBASE_SETUP.md.',
-      );
-    }
-
     final credential = await _guard(
-      () => _auth.signInWithCredential(
-        GoogleAuthProvider.credential(idToken: idToken),
-      ),
+      () => _auth.signInWithCredential(_credentialFrom(account)),
     );
 
     final user = credential.user!;
@@ -158,6 +146,40 @@ class AuthRepository {
       language: language,
     );
     return true;
+  }
+
+  /// Runs the Google sheet and returns a credential, or null if it was
+  /// dismissed. Shared with re-authentication, which needs the same proof.
+  Future<AuthCredential?> _googleCredential() async {
+    final google = GoogleSignIn.instance;
+    if (!_googleReady) {
+      await google.initialize();
+      _googleReady = true;
+    }
+    if (!google.supportsAuthenticate()) {
+      throw const AuthFailure(
+        'Google sign-in is not available on this platform.',
+      );
+    }
+    try {
+      return _credentialFrom(await google.authenticate());
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      throw AuthFailure(e.description ?? 'Google sign-in did not complete.');
+    }
+  }
+
+  static AuthCredential _credentialFrom(GoogleSignInAccount account) {
+    final idToken = account.authentication.idToken;
+    if (idToken == null) {
+      // Almost always one specific misconfiguration - see FIREBASE_SETUP.md.
+      throw const AuthFailure(
+        'Google did not return an ID token. On Android this usually means the '
+        'SHA-1 fingerprint is missing from the Firebase project, or the web '
+        'client ID is not set. See docs/FIREBASE_SETUP.md.',
+      );
+    }
+    return GoogleAuthProvider.credential(idToken: idToken);
   }
 
   bool _googleReady = false;
@@ -218,21 +240,94 @@ class AuthRepository {
   /// minutes old. That is a deliberate protection, not a bug: it stops someone
   /// who picked up an unlocked phone from erasing the account. When it happens
   /// the caller is told to sign in again.
-  Future<void> deleteAccount() async {
+  /// True when this account signs in with a password, so deleting it can ask
+  /// for that password and prove who is asking before anything is destroyed.
+  bool get deleteNeedsPassword =>
+      _auth.currentUser?.providerData
+          .any((p) => p.providerId == 'password') ??
+      false;
+
+  /// Erases the profile document and then the account itself.
+  ///
+  /// =============================================================================
+  /// WHY IT RE-AUTHENTICATES FIRST
+  /// =============================================================================
+  /// Firebase refuses `user.delete()` unless the sign-in behind it is only a
+  /// few minutes old. That is not a rare edge: anybody who opened the app,
+  /// went to settings and read the page has already aged past it, so
+  /// `requires-recent-login` was the NORMAL outcome, not the exception.
+  ///
+  /// It used to be thrown after the profile document had already gone, which
+  /// left an account that Firebase still considered signed in with nothing
+  /// behind it to load. The app then sat on a splash screen forever, through
+  /// restarts, with no way out - deleting your account bricked the app.
+  ///
+  /// So the order is now: prove who you are, THEN start destroying things. And
+  /// if the delete still fails, sign out rather than leave that state behind -
+  /// see below.
+  /// Returns false when a Google account backed out of the sheet - which
+  /// cancels the deletion and is not an error, the same shape
+  /// [signInWithGoogle] uses.
+  Future<bool> deleteAccount({String? password}) async {
     final user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null) return false;
+
+    if (!await _reauthenticate(user, password: password)) return false;
 
     await _refs.user(user.uid).delete();
 
     try {
       await user.delete();
     } on FirebaseAuthException catch (e) {
+      // The profile is already gone, so staying signed in is the one state the
+      // app cannot render. Sign out: they land on the sign-in page, which is
+      // somewhere, rather than on a spinner that never resolves.
+      await _auth.signOut();
       if (e.code == 'requires-recent-login') {
         throw const AuthFailure(
           'For your security, sign in again and then delete your account. '
           'It only takes a moment.',
         );
       }
+      throw AuthFailure(_messageFor(e));
+    }
+    return true;
+  }
+
+  /// Proves the person at the phone is the account holder, in whichever way
+  /// they signed in with.
+  ///
+  /// A password account needs the password. A Google account needs the Google
+  /// sheet again, which is why the token dance is shared with
+  /// [signInWithGoogle]. An account with neither - or a password account where
+  /// nothing was typed - is left to [deleteAccount]'s own error handling,
+  /// which now signs out rather than stranding anybody.
+  Future<bool> _reauthenticate(User user, {String? password}) async {
+    final providers = user.providerData.map((p) => p.providerId).toSet();
+
+    try {
+      if (password != null &&
+          password.isNotEmpty &&
+          providers.contains('password') &&
+          user.email != null) {
+        await user.reauthenticateWithCredential(
+          EmailAuthProvider.credential(
+            email: user.email!,
+            password: password,
+          ),
+        );
+        return true;
+      }
+
+      if (providers.contains('google.com')) {
+        final credential = await _googleCredential();
+        // Backing out of the Google sheet cancels the deletion, and cancelling
+        // must not read as a failure.
+        if (credential == null) return false;
+        await user.reauthenticateWithCredential(credential);
+      }
+      return true;
+    } on FirebaseAuthException catch (e) {
       throw AuthFailure(_messageFor(e));
     }
   }

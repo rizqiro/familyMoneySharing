@@ -153,6 +153,18 @@ final profileProvider = StreamProvider<AppUser?>((ref) {
   return ref.watch(authRepositoryProvider).watchProfile(uid);
 });
 
+/// Whether deleting this account has to ask for the password first.
+///
+/// True for an account that signs in with a password, false for a Google-only
+/// one, which proves itself by opening the Google sheet again instead. A
+/// provider rather than a call into the repository so the delete page can be
+/// built in a test without Firebase, and so the question is answered in one
+/// place.
+final deleteNeedsPasswordProvider = Provider<bool>((ref) {
+  final user = ref.watch(authStateProvider).valueOrNull;
+  return user?.providerData.any((p) => p.providerId == 'password') ?? false;
+});
+
 final householdIdProvider = Provider<String?>(
   (ref) => ref.watch(profileProvider).valueOrNull?.householdId,
 );
