@@ -211,10 +211,32 @@ class HouseholdRepository {
 
   /// Unlinks the two accounts. Shared history stays with the household so the
   /// remaining member keeps their records.
+  ///
+  /// =============================================================================
+  /// UNLESS YOU ARE THE LAST ONE OUT
+  /// =============================================================================
+  /// Then there is no "remaining member" to keep anything, and unlinking would
+  /// leave a household with `memberIds: []`. Every rule in firestore.rules is
+  /// written in terms of membership, and both `isMember()` and `soleMember()`
+  /// fail against an empty array - so that household and every budget,
+  /// category, entry, approval and request under it become unreachable by
+  /// anybody, forever. Not invisible: unreachable. Still stored, still billed,
+  /// still holding a couple's financial history, and with no one left who is
+  /// allowed to delete it.
+  ///
+  /// So the last member out erases the place instead. Proved in
+  /// `firebase/rules_test/`, which asserts that the orphan cannot be read or
+  /// deleted even by the person who created it.
   Future<void> leave({
     required String householdId,
     required String uid,
   }) async {
+    if (await isLastMember(householdId, uid)) {
+      await eraseEverything(householdId);
+      await _refs.user(uid).update({'householdId': null});
+      return;
+    }
+
     final batch = db.batch();
     batch.update(_refs.household(householdId), {
       'memberIds': FieldValue.arrayRemove([uid]),
@@ -222,6 +244,17 @@ class HouseholdRepository {
     });
     batch.update(_refs.user(uid), {'householdId': null});
     await batch.commit();
+  }
+
+  /// Whether [uid] is the only member left, so leaving would empty the place.
+  ///
+  /// The screen asking "are you sure" needs this too: "everything stays with
+  /// your partner" is true with a partner and a lie without one.
+  Future<bool> isLastMember(String householdId, String uid) async {
+    final snap = await _refs.household(householdId).get();
+    if (!snap.exists) return false;
+    final members = Household.fromDoc(snap).memberIds;
+    return members.length <= 1 && (members.isEmpty || members.first == uid);
   }
 
   /// Leaves the household as part of deleting an account.
@@ -299,6 +332,30 @@ class HouseholdRepository {
   /// erased, which is recoverable by running it again - and is much better than
   /// the alternative of not deleting anything.
   Future<void> eraseEverything(String householdId) async {
+    // Invite documents live in a top-level collection, not under the
+    // household, so nothing above reaches them and they used to outlive the
+    // place entirely - each one still naming the household and who made it.
+    //
+    // They cannot be found by query: `allow list: if false` on invites, so
+    // codes can never be enumerated. The two that can exist are both named on
+    // the household document itself - the live code, and the one that was
+    // claimed to join - so they are read off it before it goes.
+    //
+    // Best-effort: an invite may only be deleted by whoever created it, so the
+    // partner erasing the household cannot remove the other's code. Failing
+    // that is not a reason to abandon the erasure of everything else.
+    final snap = await _refs.household(householdId).get();
+    final data = snap.data() ?? const <String, Object?>{};
+    for (final key in ['activeInviteCode', 'joinedVia']) {
+      final code = data[key];
+      if (code is! String || code.isEmpty) continue;
+      try {
+        await _refs.invite(code).delete();
+      } catch (_) {
+        // Someone else's code to remove. See above.
+      }
+    }
+
     final collections = [
       _refs.expenses(householdId),
       _refs.categories(householdId),
@@ -339,8 +396,11 @@ class HouseholdRepository {
     });
   }
 
-  /// Deletes the user's old household only when nothing would be lost: they
-  /// were alone in it and it holds no budgets or expenses.
+  /// Clears the household the joiner is leaving behind.
+  ///
+  /// With a partner still in it, this is an ordinary [leave]. Alone in it, the
+  /// place is erased - including its budgets and ledger. That is a real
+  /// deletion, so the join screen says so before anyone gets here.
   Future<void> _discardIfAbandoned(String householdId, String uid) async {
     final snap = await _refs.household(householdId).get();
     if (!snap.exists) return;
@@ -354,10 +414,10 @@ class HouseholdRepository {
       return;
     }
 
-    final budgets = await _refs.budgets(householdId).limit(1).get();
-    final expenses = await _refs.expenses(householdId).limit(1).get();
-    if (budgets.docs.isEmpty && expenses.docs.isEmpty) {
-      await _refs.household(householdId).delete();
-    }
+    // Whether it holds anything or not, it has to go: the joiner is about to
+    // point their profile somewhere else, and a household whose only member
+    // has left is unreachable by everyone. This used to delete only the empty
+    // ones and silently strand the rest.
+    await eraseEverything(householdId);
   }
 }

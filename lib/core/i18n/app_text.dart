@@ -466,7 +466,11 @@ const Map<String, String> _id = {
   'settings.leave_body':
       'Kamu tidak bisa lihat anggaran dan catatan bersama lagi. Semuanya '
           'tetap ada di pasangan kamu, dan kamu bisa diundang lagi.',
+  'settings.leave_body_alone':
+      'Kamu sendirian di rumah tangga ini, jadi semua anggaran dan catatan '
+          'ikut terhapus. Tidak bisa dibatalkan.',
   'settings.leave_cta': 'Keluar',
+  'settings.leave_cta_alone': 'Keluar dan hapus',
   'settings.your_name': 'Nama kamu',
   'settings.household_name': 'Nama rumah tangga',
 
@@ -953,7 +957,11 @@ const Map<String, String> _en = {
   'settings.leave_body':
       'You stop seeing the shared budgets and ledger. It all stays with your '
           'partner, and you can be invited back.',
+  'settings.leave_body_alone':
+      'You are the only one in this household, so every budget and entry goes '
+          'with it. This cannot be undone.',
   'settings.leave_cta': 'Leave',
+  'settings.leave_cta_alone': 'Leave and delete',
   'settings.your_name': 'Your name',
   'settings.household_name': 'Household name',
 
