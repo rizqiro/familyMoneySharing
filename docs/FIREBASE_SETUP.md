@@ -290,6 +290,20 @@ token. Nothing has to be passed in Dart for that - the Gradle plugin reads it
 out of `google-services.json` at build time - but only if the file actually
 contains it.
 
+0. **Check the Gradle plugin is actually applied.** In
+   `android/app/build.gradle.kts` the plugins block must read:
+
+   ```kotlin
+   id("com.google.gms.google-services")
+   ```
+
+   with **no version and no `apply false`**. The version belongs in
+   `android/settings.gradle.kts`, where `apply false` is correct - that means
+   "make this available to subprojects". In the app module it means "resolve
+   this and then do nothing with it", so `google-services.json` is never read
+   and no `default_web_client_id` resource is generated. A perfectly correct
+   JSON file fails exactly the same way. Check this first: it looks like
+   configuration that is present, and it is configuration that is inert.
 1. Open the file and search for `"client_type": 3`. That is the web client.
    If it is not there, that is the whole problem.
 2. It is created automatically when you enable Google in Firebase Console ->
@@ -332,6 +346,18 @@ Three things have to line up, and this error means one of them does not.
 3. **Download `google-services.json` again** after adding the fingerprint and
    replace `android/app/google-services.json`. The old file does not contain
    the new client and nothing will tell you so.
+
+**Build fails: "No matching client found for package name ..."**
+Good news, in a way: it means the Google services plugin is applied and
+reading the file. The `applicationId` in `android/app/build.gradle.kts` has to
+match a `package_name` in `google-services.json` exactly. Either change the
+applicationId to match, or add an Android app with that package name in
+Firebase Console -> Project settings and download the file again.
+
+Note that the template ships `com.example.family_money_sharing`, and Google
+Play refuses any package starting with `com.example`. Changing it means
+re-registering the app in Firebase and re-adding the SHA-1 fingerprints, so it
+is much cheaper to do before you have users than after.
 
 **Google sign-in opens and immediately closes**
 Almost always the SHA-1. See above - it is step 2 that people miss.

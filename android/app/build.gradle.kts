@@ -2,8 +2,12 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    // Add the dependency for the Google services Gradle plugin
-    id("com.google.gms.google-services") version "4.5.0" apply false
+    // `apply false` here meant this was resolved and then never applied, so
+    // google-services.json was never read and no default_web_client_id
+    // resource was generated. Google sign-in then failed with "serverClientId
+    // must be provided on Android" however correct that file was. The version
+    // is declared in settings.gradle.kts; naming it again here is an error.
+    id("com.google.gms.google-services")
 }
 
 dependencies {
