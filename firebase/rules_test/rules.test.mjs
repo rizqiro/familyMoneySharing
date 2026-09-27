@@ -94,6 +94,34 @@ await check('a category on a budget you do not control is refused', async () => 
   }));
 });
 
+// 5. The orphan. A household whose last member left has memberIds: [], and
+//    every rule here is written in terms of membership - isMember() and
+//    soleMember() both fail against an empty array. Nobody can read it, nobody
+//    can delete it, and the budgets and ledger under it stay on the bill and
+//    keep holding somebody's financial history. This asserts the trap, which
+//    is why leave() must never create one.
+await check('a household with no members is unreachable by its last member',
+  async () => {
+    const orphan = 'orphan';
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const d = ctx.firestore();
+      await setDoc(doc(d, 'households', orphan), {
+        name: 'Abandoned', memberIds: [], members: {}, currencyCode: 'IDR',
+        monthStartDay: 1, createdBy: ME,
+      });
+      await setDoc(doc(d, `households/${orphan}/budgets/b`), {
+        name: 'Biaya hidup', kind: 'monthly', amount: 1, controllerId: ME,
+        createdBy: ME, periodKey: '2026-09', archived: false,
+      });
+    });
+
+    const { getDoc, deleteDoc } = await import('firebase/firestore');
+    // The person who created it and was its only member cannot even look.
+    await assertFails(getDoc(doc(db, 'households', orphan)));
+    await assertFails(deleteDoc(doc(db, 'households', orphan)));
+    await assertFails(deleteDoc(doc(db, `households/${orphan}/budgets/b`)));
+  });
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

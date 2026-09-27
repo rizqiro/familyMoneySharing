@@ -466,7 +466,11 @@ const Map<String, String> _id = {
   'settings.leave_body':
       'Kamu tidak bisa lihat anggaran dan catatan bersama lagi. Semuanya '
           'tetap ada di pasangan kamu, dan kamu bisa diundang lagi.',
+  'settings.leave_body_alone':
+      'Kamu sendirian di rumah tangga ini, jadi semua anggaran dan catatan '
+          'ikut terhapus. Tidak bisa dibatalkan.',
   'settings.leave_cta': 'Keluar',
+  'settings.leave_cta_alone': 'Keluar dan hapus',
   'settings.your_name': 'Nama kamu',
   'settings.household_name': 'Nama rumah tangga',
 
@@ -592,6 +596,8 @@ const Map<String, String> _id = {
   'delete.confirm_blurb': 'Ketik {word} untuk melanjutkan.',
   'delete.confirm_word': 'HAPUS',
   'delete.err_word': 'Ketik {word} persis untuk melanjutkan.',
+  'delete.password_blurb': 'Isi kata sandi kamu, untuk memastikan ini kamu.',
+  'delete.err_password': 'Isi kata sandi kamu.',
   'delete.final_title': 'Hapus akun kamu?',
   'delete.final_body':
       'Setelah ini akun kamu hilang dan tidak bisa dikembalikan.',
@@ -616,6 +622,9 @@ const Map<String, String> _id = {
   'splash.preparing': 'Sebentar…',
 
   'app.cannot_reach': 'Tidak bisa memuat data kamu',
+  'app.no_profile_title': 'Akun ini sudah tidak ada',
+  'app.no_profile_body':
+      'Datanya sudah dihapus. Masuk lagi untuk mulai dari awal.',
   'app.setup_title': 'Tinggal satu langkah lagi',
 };
 
@@ -948,7 +957,11 @@ const Map<String, String> _en = {
   'settings.leave_body':
       'You stop seeing the shared budgets and ledger. It all stays with your '
           'partner, and you can be invited back.',
+  'settings.leave_body_alone':
+      'You are the only one in this household, so every budget and entry goes '
+          'with it. This cannot be undone.',
   'settings.leave_cta': 'Leave',
+  'settings.leave_cta_alone': 'Leave and delete',
   'settings.your_name': 'Your name',
   'settings.household_name': 'Household name',
 
@@ -1077,6 +1090,8 @@ const Map<String, String> _en = {
   'delete.confirm_blurb': 'Type {word} to continue.',
   'delete.confirm_word': 'DELETE',
   'delete.err_word': 'Type {word} exactly to continue.',
+  'delete.password_blurb': 'Enter your password, so we know it is you.',
+  'delete.err_password': 'Enter your password.',
   'delete.final_title': 'Delete your account?',
   'delete.final_body':
       'After this your account is gone and can’t be brought back.',
@@ -1098,5 +1113,8 @@ const Map<String, String> _en = {
   'erase.confirm_cta': 'Erase everything',
 
   'app.cannot_reach': 'Could not load your data',
+  'app.no_profile_title': 'This account is gone',
+  'app.no_profile_body':
+      'Its data has been deleted. Sign in again to start over.',
   'app.setup_title': 'One setup step left',
 };

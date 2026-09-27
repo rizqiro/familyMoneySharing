@@ -52,7 +52,11 @@ void main() {
         eraseRequestedByName: eraseBy.isEmpty ? '' : 'Nadia',
       );
 
-  Future<void> pump(WidgetTester tester, {required bool paired}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    required bool paired,
+    bool needsPassword = false,
+  }) async {
     // A tall viewport so the whole page is laid out at once. A ListView does
     // not build children that are off-screen, so on a phone-sized surface the
     // confirmation field and the button below it would not exist to be tapped.
@@ -67,6 +71,7 @@ void main() {
           textProvider.overrideWithValue(const AppText(AppLanguage.english)),
           moneyProvider.overrideWithValue(Money('IDR')),
           currentUidProvider.overrideWithValue(me),
+          deleteNeedsPasswordProvider.overrideWithValue(needsPassword),
           householdProvider.overrideWith((ref) => Stream.value(h)),
           profileProvider.overrideWith(
             (ref) => Stream.value(
@@ -178,5 +183,37 @@ void main() {
     // Typing the word is not the deletion. One more deliberate confirmation.
     expect(find.text('Delete your account?'), findsOneWidget);
     expect(find.text('Cancel'), findsWidgets);
+  });
+
+  group('proving who you are, before anything is destroyed', () {
+    // Firebase refuses to delete an account whose sign-in is more than a few
+    // minutes old, and reading this page takes longer than that. That refusal
+    // used to arrive AFTER the profile document had gone, leaving an account
+    // Firebase still considered signed in with nothing behind it - the app sat
+    // on a splash screen forever, through restarts, with nothing to tap.
+    testWidgets('a password account is asked for its password', (t) async {
+      await pump(t, paired: false, needsPassword: true);
+      expect(find.text('Enter your password, so we know it is you.'),
+          findsOneWidget,);
+    });
+
+    testWidgets('a Google account is not: it re-opens the Google sheet',
+        (t) async {
+      await pump(t, paired: false);
+      expect(find.text('Enter your password, so we know it is you.'),
+          findsNothing,);
+    });
+
+    testWidgets('the right word is not enough on its own', (t) async {
+      await pump(t, paired: false, needsPassword: true);
+
+      await t.enterText(find.byType(TextField).first, 'DELETE');
+      await t.tap(find.text('Delete my account'));
+      await t.pump();
+
+      // Refused before the confirmation dialog, so nothing is destroyed.
+      expect(find.text('Enter your password.'), findsOneWidget);
+      expect(find.text('Delete your account?'), findsNothing);
+    });
   });
 }

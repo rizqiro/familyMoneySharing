@@ -419,11 +419,23 @@ class SettingsPage extends ConsumerWidget {
     String uid,
   ) async {
     final t = ref.read(textProvider);
+
+    // "Everything stays with your partner" is true with a partner and a lie
+    // without one: the last member out takes the budgets and the ledger with
+    // them, because a household nobody is in cannot be reached again. Ask the
+    // repository rather than guessing from what this screen happens to hold.
+    final alone = await ref
+        .read(householdRepositoryProvider)
+        .isLastMember(householdId, uid);
+    if (!context.mounted) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(t('settings.leave_title')),
-        content: Text(t('settings.leave_body')),
+        content: Text(
+          t(alone ? 'settings.leave_body_alone' : 'settings.leave_body'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -434,7 +446,9 @@ class SettingsPage extends ConsumerWidget {
             style: TextButton.styleFrom(
               foregroundColor: context.colors.negative,
             ),
-            child: Text(t('settings.leave_cta')),
+            child: Text(
+              t(alone ? 'settings.leave_cta_alone' : 'settings.leave_cta'),
+            ),
           ),
         ],
       ),
