@@ -34,3 +34,9 @@ firebase-debug.log
 coverage/
 # Widget Preview related
 .widget_preview/
+
+# Rendered page snapshots, written by `flutter test --tags render
+# --update-goldens`. Generated artefacts, and font rasterisation differs
+# between Linux, macOS and Windows, so a PNG written on one machine will not
+# match on another. Regenerate them locally instead of committing them.
+test/render/

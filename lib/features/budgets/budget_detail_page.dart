@@ -655,6 +655,13 @@ class _PaceWarning extends ConsumerWidget {
 /// One bar in three parts, because "Rp 520.000 left" hides a real difference:
 /// money already spent is gone, money sitting in a category is spoken for, and
 /// money not yet carved up is the only part you can freely move.
+///
+/// A saving pot gets a different card with the same name, because the question
+/// is different. On a monthly budget two of the three figures are a PLAN -
+/// money not spent yet, which may never be. Running that on a pot produced
+/// "Sudah dibelanjakan Rp 14.000.000" for a balance that had been saved, not
+/// spent, next to a "Masih di kategori" figure that was the GAP to the target:
+/// money nobody has. See [_HowItIsSaved].
 class _WhereItStands extends ConsumerWidget {
   const _WhereItStands({required this.view});
 
@@ -662,6 +669,8 @@ class _WhereItStands extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (view.isSaving) return _HowItIsSaved(view: view);
+
     final colors = context.colors;
     final text = Theme.of(context).textTheme;
     final t = ref.watch(textProvider);
@@ -737,39 +746,147 @@ class _WhereItStands extends ConsumerWidget {
   }
 }
 
+/// A saving pot's balance, split by whether it has been earmarked.
+///
+/// Three figures, and all three are money that is in the pot right now:
+///
+///   1. what has been saved altogether;
+///   2. how much of that sits in a category - Pendidikan, Dana darurat, …;
+///   3. how much of it has not been assigned to one yet.
+///
+/// (2) and (3) add up to (1), so the bar splits the total in two and the first
+/// row is the total itself rather than a third slice. That is the whole
+/// difference from the monthly card: nothing here is a plan, a target or a
+/// gap, so there is no segment standing for money that does not exist.
+class _HowItIsSaved extends ConsumerWidget {
+  const _HowItIsSaved({required this.view});
+
+  final BudgetView view;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final text = Theme.of(context).textTheme;
+    final t = ref.watch(textProvider);
+    final money = ref.watch(moneyProvider);
+
+    final total = view.spent;
+    if (total <= 0) return const SizedBox.shrink();
+
+    final inCategories = view.savedInCategories;
+    final unassigned = view.savedUnassigned;
+    final categoryColor = colors.tintFor(view.budget.id).badge;
+
+    return SoftCard(
+      padding: const EdgeInsets.all(Insets.lg + 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t('detail.where_it_stands'),
+            style: text.labelSmall?.copyWith(color: colors.inkMuted),
+          ),
+          const SizedBox(height: Insets.md),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: SizedBox(
+              height: 26,
+              child: Row(
+                children: [
+                  for (final part in [
+                    (inCategories, categoryColor),
+                    (unassigned, colors.track),
+                  ])
+                    if (part.$1 > 0)
+                      Expanded(
+                        flex: (part.$1 / total * 1000).round().clamp(1, 1000),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 2),
+                          color: part.$2,
+                        ),
+                      ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: Insets.md),
+          // The total carries no swatch: it is not a slice of the bar, it is
+          // the bar.
+          _StandRow(
+            label: t('detail.saved_total'),
+            value: money.format(total),
+            strong: true,
+          ),
+          const SizedBox(height: Insets.sm),
+          Divider(height: 1, color: colors.hairline),
+          _StandRow(
+            color: categoryColor,
+            label: t('detail.saved_in_categories'),
+            value: money.format(inCategories),
+          ),
+          _StandRow(
+            color: colors.track,
+            label: t('detail.saved_unassigned'),
+            value: money.format(unassigned),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StandRow extends StatelessWidget {
   const _StandRow({
-    required this.color,
+    this.color,
     required this.label,
     required this.value,
+    this.strong = false,
   });
 
-  final Color color;
+  /// The swatch matching this row's slice of the bar, or null for a row that
+  /// is a total rather than a slice. The gap is held open either way so the
+  /// labels stay in one column.
+  final Color? color;
   final String label;
   final String value;
+
+  /// A total: heavier on both sides, since it is what the other rows add up to.
+  final bool strong;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final weight = strong ? FontWeight.w600 : FontWeight.w500;
     return Padding(
       padding: const EdgeInsets.only(top: Insets.sm),
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: 9,
             height: 9,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-              border: Border.all(color: context.colors.hairline),
-            ),
+            child: color == null
+                ? null
+                : DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(2),
+                      border: Border.all(color: context.colors.hairline),
+                    ),
+                  ),
           ),
           const SizedBox(width: Insets.sm),
-          Expanded(child: Text(label, style: text.bodyMedium)),
+          Expanded(
+            child: Text(
+              label,
+              style: strong
+                  ? text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
+                  : text.bodyMedium,
+            ),
+          ),
           Text(
             value,
             style: text.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
+              fontWeight: weight,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),

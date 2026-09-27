@@ -56,7 +56,15 @@ class CategoryView {
 
   /// The figure the category's bar measures: money out for a monthly budget,
   /// money in for a saving pot.
-  double get spent => saving ? income - spending : spending;
+  ///
+  /// Clamped at zero on a pot. A category of a saving pot holds money that is
+  /// actually there, so it cannot be negative: you cannot have taken more out
+  /// of "Pendidikan" than was ever put in. The expense editor refuses a
+  /// withdrawal that would do it; the clamp is for entries written before that
+  /// check existed.
+  double get spent => saving
+      ? (income - spending).clamp(0.0, double.infinity)
+      : spending;
 
   double get remaining => allocated - spent;
 
@@ -139,7 +147,28 @@ class BudgetView {
   ///
   /// Monthly: what has gone out. Saving: what is in the pot, which is what has
   /// been paid in less anything taken back out.
-  double get spent => isSaving ? income - spending : spending;
+  ///
+  /// Clamped at zero on a pot, for the reason given on [CategoryView.spent]:
+  /// a savings balance is money that exists, and money that exists is never
+  /// negative.
+  double get spent => isSaving
+      ? (income - spending).clamp(0.0, double.infinity)
+      : spending;
+
+  /// How much of the pot's balance sits inside a category.
+  ///
+  /// Only meaningful on a saving pot, and deliberately NOT the same shape as
+  /// the monthly breakdown. A monthly budget's parts are a plan: two of its
+  /// three figures are money that has not been spent and may never be. A pot's
+  /// parts are all money that is actually in the pot right now, split by
+  /// whether it has been earmarked yet.
+  double get savedInCategories =>
+      categories.fold(0.0, (sum, c) => sum + c.spent);
+
+  /// The rest of the balance: paid in without naming a category, or left over
+  /// after one was deleted. Clamped for the same reason as [spent].
+  double get savedUnassigned =>
+      (spent - savedInCategories).clamp(0.0, double.infinity);
 
   /// The total carved into categories, after anything granted away out of one.
   ///

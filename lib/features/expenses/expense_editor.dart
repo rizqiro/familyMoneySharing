@@ -11,6 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/common.dart';
 import '../../models/budget.dart';
 import '../../models/expense.dart';
+import '../../models/household.dart';
 import '../../models/spend_category.dart';
 import '../../state/providers.dart';
 import '../money/request_money_sheet.dart';
@@ -156,11 +157,74 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
         .toList();
   }
 
+  /// How much may be taken out of a saving pot right now, or null when the
+  /// question does not apply - a monthly budget, or money going in.
+  ///
+  /// A savings balance is money that exists, so taking out more than is there
+  /// is not "over budget", it is impossible. A monthly budget is the opposite:
+  /// going over it is allowed and is the whole point of showing it, so this
+  /// deliberately refuses to answer for one.
+  ///
+  /// The ceiling is the category's balance when one is named, and the pot's
+  /// unassigned balance when none is, because money already earmarked belongs
+  /// to the category holding it. Editing an existing withdrawal adds its own
+  /// amount back, or lowering Rp 500.000 to Rp 400.000 would be refused for
+  /// exceeding a balance it is itself part of.
+  ///
+  /// This is a client-side guard. Firestore rules cannot enforce it: the
+  /// balance is the sum of every entry ever filed against the pot, and a rule
+  /// can only see the document being written.
+  ({double amount, String name})? _withdrawalCeiling() {
+    if (_kind != EntryKind.spending || _budgetId == null) return null;
+
+    final summary = ref.read(summaryProvider);
+    final pots = summary.savings.where((v) => v.budget.id == _budgetId);
+    if (pots.isEmpty) return null;
+    final pot = pots.first;
+
+    var refund = 0.0;
+    final old = widget.existing;
+    if (old != null &&
+        old.budgetId == _budgetId &&
+        old.categoryId == (_categoryId ?? '') &&
+        old.kindIn(saving: true) == EntryKind.spending) {
+      refund = old.amount;
+    }
+
+    if (_categoryId != null && _categoryId!.isNotEmpty) {
+      final held =
+          pot.categories.where((c) => c.category.id == _categoryId);
+      if (held.isEmpty) return null;
+      return (
+        amount: held.first.spent + refund,
+        name: held.first.category.name,
+      );
+    }
+    return (amount: pot.savedUnassigned + refund, name: pot.budget.name);
+  }
+
   Future<void> _save() async {
     final householdId = ref.read(householdIdProvider);
     final uid = ref.read(currentUidProvider);
-    final household = ref.read(householdProvider).valueOrNull;
-    if (householdId == null || uid == null || household == null) return;
+    if (householdId == null || uid == null) return;
+
+    // `await ... .future` rather than `.valueOrNull`, which is a snapshot: a
+    // StreamProvider nothing has subscribed to yet answers "still loading", and
+    // this sheet only ever READS the household, never watches it. Taking the
+    // snapshot meant that on a cold open the button did nothing at all - no
+    // save, no error, no spinner - which reads as a dead button. Awaiting the
+    // future waits for the first value instead.
+    final Household? loaded;
+    try {
+      loaded = await ref.read(householdProvider.future);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = describeFailure(e, ref.read(textProvider)));
+      }
+      return;
+    }
+    if (!mounted || loaded == null) return;
+    final household = loaded;
 
     final amount = Money.parseInput(_amount.text, household.currencyCode);
     if (amount == null || amount <= 0) {
@@ -169,6 +233,19 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
     }
     if (_budgetId == null) {
       setState(() => _error = ref.read(textProvider)('expense.err_budget'));
+      return;
+    }
+
+    // A saving pot cannot go negative. See [_withdrawalCeiling].
+    final ceiling = _withdrawalCeiling();
+    if (ceiling != null && amount > ceiling.amount) {
+      final t = ref.read(textProvider);
+      setState(
+        () => _error = t('expense.err_saving_over', {
+          'name': ceiling.name,
+          'amount': Money(household.currencyCode).format(ceiling.amount),
+        }),
+      );
       return;
     }
 
@@ -332,6 +409,21 @@ class _ExpenseEditorState extends ConsumerState<ExpenseEditor> {
                 ),
               ),
             ),
+
+            // What is actually in the pot, shown while the amount is being
+            // typed rather than only after the sheet refuses it. The codebase's
+            // rule for the ownership check applies here too: an honest UI shows
+            // the limit, it does not spring it.
+            if (_withdrawalCeiling() case final ceiling?) ...[
+              const SizedBox(height: Insets.sm),
+              Text(
+                t('expense.pot_available', {
+                  'amount': money.format(ceiling.amount),
+                }),
+                textAlign: TextAlign.center,
+                style: text.bodySmall?.copyWith(color: colors.inkSecondary),
+              ),
+            ],
             const SizedBox(height: Insets.lg),
 
             if (budgets.isEmpty)

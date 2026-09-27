@@ -525,6 +525,12 @@ const Map<String, String> _id = {
       'Kelebihan {over}. Di {budget} cuma sisa {headroom}. Kurangi kategori '
           'lain, atau naikkan anggarannya.',
 
+  'detail.saved_total': 'Sudah terkumpul',
+  'detail.saved_in_categories': 'Ada di kategori',
+  'detail.saved_unassigned': 'Belum dibagi',
+  'expense.err_saving_over': 'Di {name} cuma ada {amount}.',
+  'expense.pot_available': 'Bisa diambil {amount}',
+
   'detail.taken_out': 'Diambil lagi',
   'detail.income_added': '{amount} masuk ke anggaran ini.',
   'detail.record_income': 'Catat pemasukan',
@@ -1000,6 +1006,12 @@ const Map<String, String> _en = {
   'category_editor.err_over':
       'That is {over} too much. {budget} has only {headroom} left. Lower '
           'another category, or raise the budget.',
+
+  'detail.saved_total': 'Saved so far',
+  'detail.saved_in_categories': 'In categories',
+  'detail.saved_unassigned': 'Not assigned',
+  'expense.err_saving_over': '{name} only has {amount}.',
+  'expense.pot_available': '{amount} available',
 
   'detail.taken_out': 'Taken back out',
   'detail.income_added': '{amount} paid into this budget.',
