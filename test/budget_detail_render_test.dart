@@ -133,6 +133,8 @@ void main() {
           budgetId: 'pot', kind: EntryKind.income, day: 10,),
       entry('p3', 's2', 3000000, 'Setoran darurat',
           budgetId: 'pot', kind: EntryKind.income, day: 12,),
+      entry('p6', 's2', 4800000, 'Bonus masuk tabungan',
+          budgetId: 'pot', kind: EntryKind.income, day: 14,),
       entry('p4', 's2', 800000, 'Ambil buat berobat',
           budgetId: 'pot', kind: EntryKind.spending, day: 17,),
       // An old row from before the app knew about income: null kind on a pot
