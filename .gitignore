@@ -20,7 +20,7 @@ pubspec.lock
 # lib/firebase_options.dart is committed as a placeholder and is safe to
 # commit once generated - those API keys are public identifiers, and access is
 # controlled by the Firestore security rules, not by hiding them.
-android/app/google-services.json
+android/app/ces.json
 ios/Runner/GoogleService-Info.plist
 macos/Runner/GoogleService-Info.plist
 .firebase/

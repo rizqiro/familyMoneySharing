@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "752778443640",
+    "project_id": "family-money-55d87",
+    "storage_bucket": "family-money-55d87.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:752778443640:android:b31bad5b217d34eac8a68d",
+        "android_client_info": {
+          "package_name": "com.example.family_money_sharing"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "752778443640-b6jft42tr0tfs6q6s17rqorgrvugvn4s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByM-YbpXeGdzxLM2LCpg3NDxd9wmkfbhQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "752778443640-b6jft42tr0tfs6q6s17rqorgrvugvn4s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

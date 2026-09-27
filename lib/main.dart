@@ -42,6 +42,7 @@ Future<void> main() async {
 
   try {
     await Firebase.initializeApp(
+      name: "familysharingmoney",
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (error) {
