@@ -280,6 +280,38 @@ Either click the link, or run the index deploy in step 6.
 **Sign-up fails: "Email sign-in is not enabled"**
 Step 2 was skipped.
 
+**Google sign-in: "serverClientId must be provided on Android"**
+This one fails *before* the account sheet even opens, and it is always the
+same thing: `android/app/google-services.json` has no **web** OAuth client in
+it.
+
+Android's Credential Manager needs the project's web client id to mint an ID
+token. Nothing has to be passed in Dart for that - the Gradle plugin reads it
+out of `google-services.json` at build time - but only if the file actually
+contains it.
+
+1. Open the file and search for `"client_type": 3`. That is the web client.
+   If it is not there, that is the whole problem.
+2. It is created automatically when you enable Google in Firebase Console ->
+   Authentication -> Sign-in method -> Google -> Enable. If Google was never
+   enabled, or the web app was later deleted, no such entry exists.
+3. Download `google-services.json` again and replace
+   `android/app/google-services.json`.
+4. `flutter clean` and rebuild. The value is baked in at build time, so a hot
+   restart will not pick it up and you will think the fix did not work.
+
+If you need to get moving before sorting the file out, pass the web client id
+directly - it takes precedence over the file:
+
+```
+flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=123-abc.apps.googleusercontent.com
+```
+
+Find it in Google Cloud Console -> APIs & Services -> Credentials, under OAuth
+2.0 Client IDs, the one of type **Web application**. Use the *web* one even
+though you are building for Android; the Android client id is not it and will
+fail in a way that looks identical.
+
 **Google sign-in: "Google did not return an ID token"**
 Three things have to line up, and this error means one of them does not.
 

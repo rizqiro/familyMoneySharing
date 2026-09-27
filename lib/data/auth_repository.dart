@@ -106,31 +106,8 @@ class AuthRepository {
   /// Returns false when the person backed out of the Google sheet - which is
   /// not an error and must not be shown as one.
   Future<bool> signInWithGoogle({required AppLanguage language}) async {
-    final google = GoogleSignIn.instance;
-
-    // `initialize` is idempotent but does platform work, so it is done once and
-    // remembered. Not in main() on purpose: someone who only ever uses email
-    // should not pay for this at startup.
-    if (!_googleReady) {
-      await google.initialize();
-      _googleReady = true;
-    }
-
-    // Web uses a Google-rendered button instead of an app-triggered flow, so
-    // the button is hidden there rather than failing at the tap.
-    if (!google.supportsAuthenticate()) {
-      throw const AuthFailure(
-        'Google sign-in is not available on this platform.',
-      );
-    }
-
-    final GoogleSignInAccount account;
-    try {
-      account = await google.authenticate();
-    } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) return false;
-      throw AuthFailure(e.description ?? 'Google sign-in did not complete.');
-    }
+    final account = await _googleAccount();
+    if (account == null) return false;
 
     final credential = await _guard(
       () => _auth.signInWithCredential(_credentialFrom(account)),
@@ -151,23 +128,75 @@ class AuthRepository {
   /// Runs the Google sheet and returns a credential, or null if it was
   /// dismissed. Shared with re-authentication, which needs the same proof.
   Future<AuthCredential?> _googleCredential() async {
+    final account = await _googleAccount();
+    return account == null ? null : _credentialFrom(account);
+  }
+
+  /// The one place the Google sheet is opened, for signing in and for proving
+  /// who you are before a deletion. Returns null when it was dismissed.
+  ///
+  /// =============================================================================
+  /// WHERE THE ANDROID CLIENT ID COMES FROM
+  /// =============================================================================
+  /// Android's Credential Manager needs the project's *web* OAuth client id to
+  /// mint an ID token. Normally nothing has to be passed here: the Gradle
+  /// plugin reads `android/app/google-services.json` at build time and bakes
+  /// the value in, as long as that file has an `oauth_client` entry with
+  /// `client_type: 3`. Enabling Google as a sign-in provider in the Firebase
+  /// Console creates one; a project where that was never enabled has no such
+  /// entry, and the sheet fails with "serverClientId must be provided on
+  /// Android" before it ever opens.
+  ///
+  /// [_serverClientId] is an override for that case - see the constant.
+  Future<GoogleSignInAccount?> _googleAccount() async {
     final google = GoogleSignIn.instance;
+
+    // `initialize` is idempotent but does platform work, so it is done once and
+    // remembered. Not in main() on purpose: someone who only ever uses email
+    // should not pay for this at startup.
     if (!_googleReady) {
-      await google.initialize();
+      await google.initialize(
+        serverClientId: _serverClientId.isEmpty ? null : _serverClientId,
+      );
       _googleReady = true;
     }
+
+    // Web uses a Google-rendered button instead of an app-triggered flow, so
+    // the button is hidden there rather than failing at the tap.
     if (!google.supportsAuthenticate()) {
       throw const AuthFailure(
         'Google sign-in is not available on this platform.',
       );
     }
+
     try {
-      return _credentialFrom(await google.authenticate());
+      return await google.authenticate();
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      if (e.code == GoogleSignInExceptionCode.clientConfigurationError) {
+        // The plugin's own wording here is "serverClientId must be provided on
+        // Android", which is true and useless to whoever is holding the phone.
+        throw const AuthFailure(
+          'Google sign-in is not set up for this build. The project needs '
+          'Google enabled as a sign-in provider and a fresh '
+          'google-services.json. See docs/FIREBASE_SETUP.md.',
+        );
+      }
       throw AuthFailure(e.description ?? 'Google sign-in did not complete.');
     }
   }
+
+  /// An explicit web OAuth client id, for a build whose `google-services.json`
+  /// has no web client entry. Empty by default, which is the normal case:
+  /// passing null lets the plugin use the value the Gradle plugin baked in.
+  ///
+  ///   flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=123-abc.apps.googleusercontent.com
+  ///
+  /// A compile-time constant rather than a setting, because it is a property
+  /// of the build, and because it must never differ between the code and the
+  /// signing configuration it was registered against.
+  static const _serverClientId =
+      String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 
   static AuthCredential _credentialFrom(GoogleSignInAccount account) {
     final idToken = account.authentication.idToken;
