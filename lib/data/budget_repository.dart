@@ -58,8 +58,22 @@ class BudgetRepository {
   /// in the household's language, and a repository has no business knowing
   /// which language that is.
   ///
-  /// Everything goes in one batch, so a pot can never exist with only some of
-  /// its categories.
+  /// The budget is committed BEFORE its categories, in two writes rather than
+  /// one batch. That is not a style choice.
+  ///
+  /// Creating a category is guarded by `controlsBudget()`, which does a
+  /// `get()` on the budget document. A batched write is evaluated against the
+  /// database as it stands BEFORE the batch is applied, so inside one batch
+  /// that `get()` finds nothing, reading `.controllerId` off null fails the
+  /// rule, and the whole commit is rejected. It made every saving pot
+  /// impossible to create - "permission denied" - while monthly budgets, which
+  /// seed no categories, were fine. Verified against the rules emulator; the
+  /// test is in `firebase/rules_test/`.
+  ///
+  /// The cost is that a pot can briefly exist with none of its categories. The
+  /// seeds are empty headings, so that is a far better failure than the one it
+  /// replaces: a pot that could not be made at all, or a second pot created by
+  /// someone retrying after an error that had already written the first.
   Future<String> create(
     String householdId,
     Budget budget, {
@@ -67,14 +81,16 @@ class BudgetRepository {
   }) async {
     final ref = _refs.budgets(householdId).doc();
 
-    final batch = db.batch();
-    batch.set(ref, {
+    await ref.set({
       ...budget.toJson(),
       'periodKey': periodKeyFor(budget),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
+    if (seedCategories.isEmpty) return ref.id;
+
+    final batch = db.batch();
     for (final (emoji, name) in seedCategories) {
       batch.set(_refs.categories(householdId).doc(), {
         'budgetId': ref.id,
@@ -91,7 +107,15 @@ class BudgetRepository {
       });
     }
 
-    await batch.commit();
+    // The pot itself is already saved. If the headings do not make it - a
+    // dropped connection between the two writes - the pot is still usable and
+    // the categories can be added by hand, which is a better outcome than
+    // reporting a failure for something that already succeeded.
+    try {
+      await batch.commit();
+    } catch (_) {
+      // Deliberately swallowed. See above.
+    }
     return ref.id;
   }
 

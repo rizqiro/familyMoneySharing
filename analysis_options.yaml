@@ -14,3 +14,6 @@ analyzer:
     - build/**
     - android/**
     - ios/**
+    # The Firestore rules tests are JavaScript, but firebase-tools ships Dart
+    # templates inside its package, and the analyzer walks into them.
+    - firebase/rules_test/node_modules/**
